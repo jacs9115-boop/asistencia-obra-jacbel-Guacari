@@ -74,6 +74,29 @@ app.post("/api/marcar", upload.single("foto"), async (req, res) => {
   }
 });
 
+app.post("/api/marcar-manual", async (req, res) => {
+  try {
+    requireAppsScriptUrl();
+    const { trabajador, tipo, fecha, hora, pin } = req.body;
+    if (!trabajador || !fecha || !hora) {
+      return res.status(400).json({ error: "Falta el trabajador, la fecha o la hora" });
+    }
+    const scriptRes = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "marcar_manual", trabajador, tipo, fecha, hora, pin: pin || "" }),
+    });
+    const scriptData = await scriptRes.json();
+    if (!scriptData.ok) {
+      return res.status(400).json({ error: scriptData.error || "Error al guardar el registro" });
+    }
+    res.json(scriptData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+
 app.post("/api/trabajadores", async (req, res) => {
   try {
     requireAppsScriptUrl();
