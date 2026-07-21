@@ -64,8 +64,9 @@
   .sheet h2 { margin: 4px 0 14px; font-size: 18px; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-  input[type="text"] { width: 100%; border: 1px solid var(--border); border-radius: 10px;
+  input[type="text"], input[type="date"], input[type="time"], select { width: 100%; border: 1px solid var(--border); border-radius: 10px;
     padding: 12px; font-size: 15px; background: var(--card); color: var(--text); font-family: inherit; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
   .btn-primary { width: 100%; padding: 15px; border: none; border-radius: 12px;
     background: var(--navy); color: #fff; font-weight: 700; font-size: 16px; margin-top: 6px; }
   .btn-secondary { width: 100%; padding: 13px; border: none; border-radius: 12px;
@@ -95,7 +96,10 @@
     <img src="icons/icon-180.png" alt="Logo JACBEL" />
     <h1>Asistencia<br/>Obra Guacarí</h1>
   </div>
-  <button type="button" class="gear" id="btnAdmin" aria-label="Administrar trabajadores">⚙️</button>
+  <div style="display:flex;gap:2px;">
+    <button type="button" class="gear" id="btnManual" aria-label="Registro manual">🕒</button>
+    <button type="button" class="gear" id="btnAdmin" aria-label="Administrar trabajadores">⚙️</button>
+  </div>
 </header>
 
 <main id="lista">
@@ -122,6 +126,36 @@
   <button type="button" class="btn-secondary" id="btnCerrarAdmin">Cerrar</button>
 </div>
 
+<div class="sheet-overlay" id="overlayManual"></div>
+<div class="sheet" id="sheetManual">
+  <h2>Registro manual (retroactivo)</h2>
+  <div class="hint" style="margin-bottom:14px;">Úsalo cuando no se pudo marcar asistencia ese día, o cuando llegaste tarde a registrar y la hora real de entrada fue otra. Llena la entrada, la salida, o ambas (por ejemplo si fue un día completo que no se registró). Queda guardado en el reporte marcado como "Manual".</div>
+  <div class="field">
+    <label for="manualTrabajador">Trabajador</label>
+    <select id="manualTrabajador"></select>
+  </div>
+  <div class="field">
+    <label for="manualFecha">Fecha</label>
+    <input type="date" id="manualFecha" />
+  </div>
+  <div class="field">
+    <label for="manualHoraEntrada">Hora de entrada (opcional)</label>
+    <input type="time" id="manualHoraEntrada" />
+  </div>
+  <div class="field">
+    <label for="manualHoraSalida">Hora de salida (opcional)</label>
+    <input type="time" id="manualHoraSalida" />
+  </div>
+  <div class="hint" style="margin-bottom:14px;">Debes llenar al menos una de las dos horas.</div>
+  <div class="field">
+    <label for="pinManual">PIN de administrador</label>
+    <input type="text" id="pinManual" inputmode="numeric" placeholder="****" />
+  </div>
+  <button type="button" class="btn-primary" id="btnGuardarManual">Guardar registro</button>
+  <div class="status" id="statusManual"></div>
+  <button type="button" class="btn-secondary" id="btnCerrarManual">Cerrar</button>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="overlay-carga" id="overlayCarga"></div>
 
@@ -133,6 +167,12 @@ const btnAdmin = document.getElementById("btnAdmin");
 const btnCerrarAdmin = document.getElementById("btnCerrarAdmin");
 const btnAgregarTrabajador = document.getElementById("btnAgregarTrabajador");
 const statusAdmin = document.getElementById("statusAdmin");
+const overlayManual = document.getElementById("overlayManual");
+const sheetManual = document.getElementById("sheetManual");
+const btnManual = document.getElementById("btnManual");
+const btnCerrarManual = document.getElementById("btnCerrarManual");
+const btnGuardarManual = document.getElementById("btnGuardarManual");
+const statusManual = document.getElementById("statusManual");
 const fotoMarcaInput = document.getElementById("fotoMarcaInput");
 const toast = document.getElementById("toast");
 const overlayCarga = document.getElementById("overlayCarga");
@@ -167,6 +207,68 @@ function cerrarAdmin() {
 btnAdmin.addEventListener("click", abrirAdmin);
 btnCerrarAdmin.addEventListener("click", cerrarAdmin);
 overlayAdmin.addEventListener("click", cerrarAdmin);
+
+function hoyLocal_() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function poblarSelectTrabajadores() {
+  const sel = document.getElementById("manualTrabajador");
+  sel.innerHTML = trabajadoresActuales.map((t) => `<option value="${t.nombre.replace(/"/g, '&quot;')}">${t.nombre}</option>`).join("");
+}
+function abrirManual() {
+  poblarSelectTrabajadores();
+  document.getElementById("manualFecha").value = hoyLocal_();
+  document.getElementById("manualHoraEntrada").value = "";
+  document.getElementById("manualHoraSalida").value = "";
+  document.getElementById("pinManual").value = "";
+  statusManual.textContent = "";
+  overlayManual.classList.add("open");
+  sheetManual.classList.add("open");
+}
+function cerrarManual() {
+  overlayManual.classList.remove("open");
+  sheetManual.classList.remove("open");
+}
+btnManual.addEventListener("click", abrirManual);
+btnCerrarManual.addEventListener("click", cerrarManual);
+overlayManual.addEventListener("click", cerrarManual);
+
+async function guardarMarcaManual_(trabajador, tipo, fecha, hora, pin) {
+  const res = await fetch(API_BASE + "/api/marcar-manual", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ trabajador, tipo, fecha, hora, pin }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Error al guardar");
+}
+
+btnGuardarManual.addEventListener("click", async () => {
+  const trabajador = document.getElementById("manualTrabajador").value;
+  const fecha = document.getElementById("manualFecha").value;
+  const horaEntrada = document.getElementById("manualHoraEntrada").value;
+  const horaSalida = document.getElementById("manualHoraSalida").value;
+  const pin = document.getElementById("pinManual").value.trim();
+  if (!trabajador) { statusManual.textContent = "No hay trabajadores para elegir."; return; }
+  if (!fecha) { statusManual.textContent = "Escribe la fecha."; return; }
+  if (!horaEntrada && !horaSalida) { statusManual.textContent = "Escribe al menos una hora (entrada o salida)."; return; }
+  if (!pin) { statusManual.textContent = "Escribe el PIN de administrador."; return; }
+  statusManual.innerHTML = '<span class="spinner" style="border-top-color:var(--navy);border-color:var(--border)"></span> Guardando...';
+  try {
+    const partes = [];
+    if (horaEntrada) { await guardarMarcaManual_(trabajador, "Entrada", fecha, horaEntrada, pin); partes.push(`Entrada ${horaEntrada}`); }
+    if (horaSalida) { await guardarMarcaManual_(trabajador, "Salida", fecha, horaSalida, pin); partes.push(`Salida ${horaSalida}`); }
+    statusManual.textContent = "";
+    cerrarManual();
+    mostrarToast(`✓ Registro manual guardado: ${trabajador} - ${partes.join(" / ")} (${fecha})`);
+    cargarTrabajadores();
+  } catch (err) {
+    statusManual.textContent = "Error: " + err.message;
+  }
+});
 
 function renderTrabajadores(trabajadores) {
   trabajadoresActuales = trabajadores;
