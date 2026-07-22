@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
+const { calcularLiquidacion } = require("./liquidacion");
+const { generarPDFLiquidacion } = require("./liquidacionPdf");
 
 const PORT = process.env.PORT || 3000;
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
@@ -42,7 +44,6 @@ app.get("/api/registros", async (req, res) => {
     res.status(500).json({ error: err.message || "Error inesperado" });
   }
 });
-
 app.post("/api/marcar", upload.single("foto"), async (req, res) => {
   try {
     requireAppsScriptUrl();
@@ -73,7 +74,6 @@ app.post("/api/marcar", upload.single("foto"), async (req, res) => {
     res.status(500).json({ error: err.message || "Error inesperado" });
   }
 });
-
 app.post("/api/marcar-manual", async (req, res) => {
   try {
     requireAppsScriptUrl();
@@ -100,14 +100,31 @@ app.post("/api/marcar-manual", async (req, res) => {
 app.post("/api/trabajadores", async (req, res) => {
   try {
     requireAppsScriptUrl();
-    const { nombre, pin } = req.body;
+    const { nombre, valorSemanal, pin } = req.body;
     const scriptRes = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accion: "agregar_trabajador", nombre, pin }),
+      body: JSON.stringify({ accion: "agregar_trabajador", nombre, valorSemanal, pin }),
     });
     const data = await scriptRes.json();
     if (!data.ok) return res.status(400).json({ error: data.error || "Error al agregar" });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+app.post("/api/trabajadores/:nombre/valor", async (req, res) => {
+  try {
+    requireAppsScriptUrl();
+    const { valorSemanal, pin } = req.body;
+    const scriptRes = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "editar_valor_trabajador", nombre: req.params.nombre, valorSemanal, pin }),
+    });
+    const data = await scriptRes.json();
+    if (!data.ok) return res.status(400).json({ error: data.error || "Error al actualizar el valor" });
     res.json(data);
   } catch (err) {
     console.error(err);
@@ -130,6 +147,37 @@ app.delete("/api/trabajadores/:nombre", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+app.post("/api/liquidacion", async (req, res) => {
+  try {
+    requireAppsScriptUrl();
+    const { desde, hasta, seleccion } = req.body;
+    if (!desde || !hasta || !Array.isArray(seleccion) || !seleccion.length) {
+      return res.status(400).json({ error: "Falta la fecha desde, hasta, o no seleccionaste trabajadores" });
+    }
+
+    const [trabajadoresRes, registrosRes] = await Promise.all([
+      fetch(`${APPS_SCRIPT_URL}?trabajadores=1`).then((r) => r.json()),
+      fetch(`${APPS_SCRIPT_URL}?registrosRango=1&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`).then((r) => r.json()),
+    ]);
+    if (!Array.isArray(trabajadoresRes) || !Array.isArray(registrosRes)) {
+      return res.status(502).json({ error: "No se pudo leer la información de Apps Script" });
+    }
+
+    const resultado = calcularLiquidacion({ trabajadores: trabajadoresRes, registros: registrosRes, desde, hasta, seleccion });
+    if (!resultado.ok) {
+      return res.status(409).json({ error: "Hay registros incompletos", incompletos: resultado.incompletos });
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=liquidacion-${desde}-a-${hasta}.pdf`);
+    generarPDFLiquidacion(res, resultado);
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || "Error inesperado" });
+    }
   }
 });
 
