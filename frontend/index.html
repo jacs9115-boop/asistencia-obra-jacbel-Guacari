@@ -90,13 +90,13 @@
 </style>
 </head>
 <body>
-
 <header>
   <div class="brand">
     <img src="icons/icon-180.png" alt="Logo JACBEL" />
     <h1>Asistencia<br/>Obra Guacarí</h1>
   </div>
   <div style="display:flex;gap:2px;">
+    <button type="button" class="gear" id="btnLiquidacion" aria-label="Liquidación de nómina">💰</button>
     <button type="button" class="gear" id="btnManual" aria-label="Registro manual">🕒</button>
     <button type="button" class="gear" id="btnAdmin" aria-label="Administrar trabajadores">⚙️</button>
   </div>
@@ -114,6 +114,11 @@
   <div class="field">
     <label for="nuevoNombre">Nombre completo</label>
     <input type="text" id="nuevoNombre" placeholder="Ej: Juan Pérez" />
+  </div>
+  <div class="field">
+    <label for="valorSemanalAgregar">Valor que gana por semana</label>
+    <input type="number" id="valorSemanalAgregar" inputmode="numeric" placeholder="Ej: 300000" />
+    <div class="hint">El valor del día se calcula como este valor ÷ 6 (lunes a sábado).</div>
   </div>
   <div class="field">
     <label for="pinAgregar">PIN de administrador</label>
@@ -156,6 +161,31 @@
   <button type="button" class="btn-secondary" id="btnCerrarManual">Cerrar</button>
 </div>
 
+<div class="sheet-overlay" id="overlayLiquidacion"></div>
+<div class="sheet" id="sheetLiquidacion">
+  <h2>Liquidación de nómina</h2>
+  <div class="field">
+    <label for="liqDesde">Desde</label>
+    <input type="date" id="liqDesde" />
+  </div>
+  <div class="field">
+    <label for="liqHasta">Hasta</label>
+    <input type="date" id="liqHasta" />
+  </div>
+  <div class="field">
+    <label>Trabajadores a liquidar</label>
+    <div class="admin-row" style="padding-top:0">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">
+        <input type="checkbox" id="liqTodos" /> Seleccionar todos
+      </label>
+    </div>
+    <div id="liqListaTrabajadores"></div>
+  </div>
+  <button type="button" class="btn-primary" id="btnGenerarLiquidacion">Generar liquidación (PDF)</button>
+  <div class="status" id="statusLiquidacion"></div>
+  <button type="button" class="btn-secondary" id="btnCerrarLiquidacion">Cerrar</button>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="overlay-carga" id="overlayCarga"></div>
 
@@ -173,6 +203,11 @@ const btnManual = document.getElementById("btnManual");
 const btnCerrarManual = document.getElementById("btnCerrarManual");
 const btnGuardarManual = document.getElementById("btnGuardarManual");
 const statusManual = document.getElementById("statusManual");
+const overlayLiquidacion = document.getElementById("overlayLiquidacion");
+const sheetLiquidacion = document.getElementById("sheetLiquidacion");
+const btnLiquidacion = document.getElementById("btnLiquidacion");
+const btnCerrarLiquidacion = document.getElementById("btnCerrarLiquidacion");
+const statusLiquidacion = document.getElementById("statusLiquidacion");
 const fotoMarcaInput = document.getElementById("fotoMarcaInput");
 const toast = document.getElementById("toast");
 const overlayCarga = document.getElementById("overlayCarga");
@@ -180,7 +215,6 @@ const overlayCarga = document.getElementById("overlayCarga");
 let trabajadoresActuales = [];
 let pendingMark = null;
 let currentPosition = null;
-
 function mostrarToast(msg, esError) {
   toast.textContent = msg;
   toast.className = "toast show" + (esError ? " error" : "");
@@ -213,7 +247,6 @@ function hoyLocal_() {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-
 function poblarSelectTrabajadores() {
   const sel = document.getElementById("manualTrabajador");
   sel.innerHTML = trabajadoresActuales.map((t) => `<option value="${t.nombre.replace(/"/g, '&quot;')}">${t.nombre}</option>`).join("");
@@ -245,7 +278,6 @@ async function guardarMarcaManual_(trabajador, tipo, fecha, hora, pin) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Error al guardar");
 }
-
 btnGuardarManual.addEventListener("click", async () => {
   const trabajador = document.getElementById("manualTrabajador").value;
   const fecha = document.getElementById("manualFecha").value;
@@ -269,7 +301,6 @@ btnGuardarManual.addEventListener("click", async () => {
     statusManual.textContent = "Error: " + err.message;
   }
 });
-
 function renderTrabajadores(trabajadores) {
   trabajadoresActuales = trabajadores;
   const main = document.getElementById("lista");
@@ -293,6 +324,9 @@ function renderTrabajadores(trabajadores) {
   }).join("");
 }
 
+function formatoMoneda_(v) {
+  return "$" + Math.round(v || 0).toLocaleString("es-CO");
+}
 function renderAdminLista() {
   const cont = document.getElementById("listaAdmin");
   if (!trabajadoresActuales.length) {
@@ -301,10 +335,40 @@ function renderAdminLista() {
   }
   cont.innerHTML = trabajadoresActuales.map((t) => {
     const nombreEscapado = t.nombre.replace(/'/g, "\\'");
-    return `<div class="admin-row"><span>${t.nombre}</span><button type="button" class="quitar" onclick="quitarTrabajador('${nombreEscapado}')">Quitar</button></div>`;
+    return `
+    <div class="admin-row" style="flex-direction:column;align-items:stretch;gap:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600">${t.nombre}</span>
+        <button type="button" class="quitar" onclick="quitarTrabajador('${nombreEscapado}')">Quitar</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)">
+        <span>${formatoMoneda_(t.valorSemanal)}/semana · ${formatoMoneda_((t.valorSemanal || 0) / 6)}/día</span>
+        <button type="button" style="background:none;border:none;color:var(--navy);font-weight:600;font-size:12.5px" onclick="editarValorTrabajador('${nombreEscapado}')">Editar valor</button>
+      </div>
+    </div>`;
   }).join("");
 }
-
+async function editarValorTrabajador(nombre) {
+  const valorTexto = prompt(`Nuevo valor semanal para "${nombre}" (solo el número):`);
+  if (valorTexto === null) return;
+  const valorSemanal = Number(valorTexto.replace(/[^\d]/g, ""));
+  if (!valorSemanal) { mostrarToast("Escribe un valor válido", true); return; }
+  const pin = prompt("PIN de administrador:");
+  if (!pin) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/trabajadores/${encodeURIComponent(nombre)}/valor`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ valorSemanal, pin }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error al actualizar");
+    mostrarToast("Valor semanal actualizado ✓");
+    cargarTrabajadores();
+  } catch (err) {
+    mostrarToast("Error: " + err.message, true);
+  }
+}
+window.editarValorTrabajador = editarValorTrabajador;
 async function cargarTrabajadores() {
   try {
     const res = await fetch(API_BASE + "/api/trabajadores");
@@ -329,7 +393,6 @@ function iniciarMarca(trabajador, tipo) {
   fotoMarcaInput.click();
 }
 window.iniciarMarca = iniciarMarca;
-
 fotoMarcaInput.addEventListener("change", async () => {
   const file = fotoMarcaInput.files[0];
   if (!file || !pendingMark) return;
@@ -362,9 +425,9 @@ fotoMarcaInput.addEventListener("change", async () => {
     fotoMarcaInput.value = "";
   }
 });
-
 btnAgregarTrabajador.addEventListener("click", async () => {
   const nombre = document.getElementById("nuevoNombre").value.trim();
+  const valorSemanal = Number(document.getElementById("valorSemanalAgregar").value) || 0;
   const pin = document.getElementById("pinAgregar").value.trim();
   if (!nombre) { statusAdmin.textContent = "Escribe el nombre del trabajador."; return; }
   if (!pin) { statusAdmin.textContent = "Escribe el PIN de administrador."; return; }
@@ -373,18 +436,121 @@ btnAgregarTrabajador.addEventListener("click", async () => {
     const res = await fetch(API_BASE + "/api/trabajadores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, pin }),
+      body: JSON.stringify({ nombre, valorSemanal, pin }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error al agregar");
     statusAdmin.textContent = "Trabajador agregado ✓";
     document.getElementById("nuevoNombre").value = "";
+    document.getElementById("valorSemanalAgregar").value = "";
     cargarTrabajadores();
   } catch (err) {
     statusAdmin.textContent = "Error: " + err.message;
   }
 });
+// ---------- Liquidacion de nomina ----------
 
+function abrirLiquidacion() {
+  document.getElementById("liqDesde").value = "";
+  document.getElementById("liqHasta").value = hoyLocal_();
+  document.getElementById("liqTodos").checked = false;
+  statusLiquidacion.textContent = "";
+  renderListaLiquidacionTrabajadores();
+  overlayLiquidacion.classList.add("open");
+  sheetLiquidacion.classList.add("open");
+}
+function cerrarLiquidacion() {
+  overlayLiquidacion.classList.remove("open");
+  sheetLiquidacion.classList.remove("open");
+}
+btnLiquidacion.addEventListener("click", abrirLiquidacion);
+btnCerrarLiquidacion.addEventListener("click", cerrarLiquidacion);
+overlayLiquidacion.addEventListener("click", cerrarLiquidacion);
+
+function renderListaLiquidacionTrabajadores() {
+  const cont = document.getElementById("liqListaTrabajadores");
+  if (!trabajadoresActuales.length) {
+    cont.innerHTML = '<div class="status">No hay trabajadores activos.</div>';
+    return;
+  }
+  cont.innerHTML = trabajadoresActuales.map((t) => {
+    const nombreEscapado = t.nombre.replace(/"/g, "&quot;");
+    return `
+    <div class="admin-row">
+      <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer">
+        <input type="checkbox" class="liq-check" value="${nombreEscapado}" />
+        ${t.nombre}
+      </label>
+      <span style="font-size:12px;color:var(--muted)">${formatoMoneda_(t.valorSemanal)}/sem</span>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("liqTodos").addEventListener("change", (e) => {
+  document.querySelectorAll(".liq-check").forEach((cb) => { cb.checked = e.target.checked; });
+});
+async function compartirOGuardarPDF_(blob, nombreArchivo, tituloCompartir) {
+  const file = new File([blob], nombreArchivo, { type: "application/pdf" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: tituloCompartir });
+    } else {
+      throw new Error("share-no-soportado");
+    }
+  } catch (shareErr) {
+    if (shareErr && shareErr.name === "AbortError") {
+      // el usuario cerro el menu de compartir, no hacer nada mas
+    } else {
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = nombreArchivo;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+    }
+  }
+}
+document.getElementById("btnGenerarLiquidacion").addEventListener("click", async () => {
+  const desde = document.getElementById("liqDesde").value;
+  const hasta = document.getElementById("liqHasta").value;
+  const seleccion = [...document.querySelectorAll(".liq-check:checked")].map((cb) => cb.value);
+  if (!desde || !hasta) { statusLiquidacion.textContent = "Escoge la fecha desde y hasta."; return; }
+  if (desde > hasta) { statusLiquidacion.textContent = "La fecha 'desde' no puede ser después de 'hasta'."; return; }
+  if (!seleccion.length) { statusLiquidacion.textContent = "Selecciona al menos un trabajador."; return; }
+
+  const btn = document.getElementById("btnGenerarLiquidacion");
+  btn.disabled = true;
+  statusLiquidacion.innerHTML = '<span class="spinner" style="border-top-color:var(--navy);border-color:var(--border)"></span> Calculando liquidación...';
+  try {
+    const res = await fetch(API_BASE + "/api/liquidacion", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ desde, hasta, seleccion }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data.incompletos && data.incompletos.length) {
+        const lista = data.incompletos.map((i) =>
+          `• ${i.trabajador} — ${i.fecha} (falta ${i.falta === "salida" ? "la salida" : "la entrada"})`
+        ).join("<br/>");
+        statusLiquidacion.innerHTML =
+          `Hay registros incompletos, complétalos con el registro manual 🕒 y vuelve a intentar:<br/>${lista}`;
+      } else {
+        statusLiquidacion.textContent = "Error: " + (data.error || "No se pudo generar la liquidación");
+      }
+      return;
+    }
+    const blob = await res.blob();
+    statusLiquidacion.textContent = "";
+    await compartirOGuardarPDF_(blob, `liquidacion-${desde}-a-${hasta}.pdf`, "Liquidación de nómina");
+    cerrarLiquidacion();
+  } catch (err) {
+    statusLiquidacion.textContent = "Error: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
 async function quitarTrabajador(nombre) {
   const pin = prompt(`Escribe el PIN de administrador para quitar a "${nombre}":`);
   if (!pin) return;
