@@ -17,18 +17,20 @@ function etiquetaTipoDia(tipo) {
 }
 
 const COLS = [
-  { titulo: "Fecha", ancho: 65 },
-  { titulo: "Día", ancho: 65 },
-  { titulo: "Tipo", ancho: 55 },
+  { titulo: "Fecha", ancho: 60 },
+  { titulo: "Día", ancho: 55 },
+  { titulo: "Tipo", ancho: 50 },
   { titulo: "Entrada", ancho: 50 },
   { titulo: "Salida", ancho: 50 },
   { titulo: "Valor día", ancho: 70 },
+  { titulo: "Descuento", ancho: 70 },
   { titulo: "H.Extra", ancho: 45 },
-  { titulo: "Valor extra", ancho: 75 },
+  { titulo: "Valor extra", ancho: 70 },
+  { titulo: "Total día", ancho: 75 },
 ];
 const ANCHO_TABLA = COLS.reduce((s, c) => s + c.ancho, 0);
 const MARGEN_X = 40;
-const ALTO_PAGINA_UTIL = 780;
+const ALTO_PAGINA_UTIL = 555;
 
 function xColumna(idx) {
   let x = MARGEN_X;
@@ -53,8 +55,9 @@ function asegurarEspacio_(doc, y, alturaNecesaria, callbackEncabezado) {
   }
   return y;
 }
+
 function generarPDFLiquidacion(res, resultado) {
-  const doc = new PDFDocument({ size: "A4", margin: 40 });
+  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 40 });
   doc.pipe(res);
 
   doc.fontSize(16).font("Helvetica-Bold").fillColor("#1F4E78").text("Liquidación de Nómina", MARGEN_X, 40);
@@ -65,7 +68,6 @@ function generarPDFLiquidacion(res, resultado) {
   );
 
   let y = 110;
-
   resultado.trabajadores.forEach((t, idxTrabajador) => {
     y = asegurarEspacio_(doc, y, 90);
     if (idxTrabajador > 0) y += 10;
@@ -85,7 +87,7 @@ function generarPDFLiquidacion(res, resultado) {
       y += 20;
     }
     t.dias.forEach((d) => {
-      const filaAltura = d.retrasoMin > 0 ? 26 : 15;
+      const filaAltura = d.descuentoTotal > 0 ? 26 : 15;
       y = asegurarEspacio_(doc, y, filaAltura, (nuevaY) => dibujarEncabezadoTabla(doc, nuevaY));
 
       doc.fontSize(8.5).font("Helvetica").fillColor("#000");
@@ -95,19 +97,27 @@ function generarPDFLiquidacion(res, resultado) {
       doc.text(d.horaEntrada.slice(0, 5), xColumna(3), y, { width: COLS[3].ancho });
       doc.text(d.horaSalida.slice(0, 5), xColumna(4), y, { width: COLS[4].ancho });
       doc.text(formatoMoneda(d.valorDia), xColumna(5), y, { width: COLS[5].ancho });
-      doc.text(d.horasExtra > 0 ? d.horasExtra.toFixed(2) : "-", xColumna(6), y, { width: COLS[6].ancho });
-      doc.text(d.valorExtra > 0 ? formatoMoneda(d.valorExtra) : "-", xColumna(7), y, { width: COLS[7].ancho });
+      doc.fillColor(d.descuentoTotal > 0 ? "#C0392B" : "#000");
+      doc.text(d.descuentoTotal > 0 ? "-" + formatoMoneda(d.descuentoTotal) : "-", xColumna(6), y, { width: COLS[6].ancho });
+      doc.fillColor("#000");
+      doc.text(d.horasExtra > 0 ? d.horasExtra.toFixed(2) : "-", xColumna(7), y, { width: COLS[7].ancho });
+      doc.text(d.valorExtra > 0 ? formatoMoneda(d.valorExtra) : "-", xColumna(8), y, { width: COLS[8].ancho });
+      doc.font("Helvetica-Bold").text(formatoMoneda(d.valorNeto), xColumna(9), y, { width: COLS[9].ancho });
+      doc.font("Helvetica");
       y += 13;
-
-      if (d.retrasoMin > 0) {
+      if (d.descuentoTotal > 0) {
+        const partes = [];
+        if (d.retrasoMin > 0) partes.push(`llegó ${d.retrasoMin} min tarde (-${formatoMoneda(d.descuentoRetraso)})`);
+        if (d.salidaTempranoMin > 0) partes.push(`salió ${d.salidaTempranoMin} min temprano (-${formatoMoneda(d.descuentoSalidaTemprano)})`);
         doc.fontSize(7.5).font("Helvetica-Oblique").fillColor("#B26A00").text(
-          `Aviso: llegó ${d.retrasoMin} min tarde (informativo, no se descuenta del pago)`,
+          `Descuento: ${partes.join(" · ")}`,
           xColumna(0), y, { width: ANCHO_TABLA }
         );
         y += 12;
       }
       doc.fillColor("#000");
     });
+
     y += 4;
     doc.moveTo(MARGEN_X, y).lineTo(MARGEN_X + ANCHO_TABLA, y).strokeColor("#999").lineWidth(0.5).stroke();
     y += 8;
@@ -116,6 +126,7 @@ function generarPDFLiquidacion(res, resultado) {
     doc.fontSize(9).font("Helvetica-Bold").fillColor("#000");
     doc.text(`Días trabajados: ${t.totalDiasTrabajados}`, MARGEN_X, y);
     doc.text(`Valor por días: ${formatoMoneda(t.totalValorDias)}`, MARGEN_X + 160, y);
+    doc.text(`Descuentos: -${formatoMoneda(t.totalDescuentos)}`, MARGEN_X + 340, y);
     y += 14;
     doc.text(`Horas extra: ${t.totalHorasExtra.toFixed(2)}`, MARGEN_X, y);
     doc.text(`Valor horas extra: ${formatoMoneda(t.totalValorExtra)}`, MARGEN_X + 160, y);
