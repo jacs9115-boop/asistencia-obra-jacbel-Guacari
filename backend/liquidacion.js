@@ -24,7 +24,6 @@ function calcularPascua_(year) {
   const dia = ((h + l - 7 * m + 114) % 31) + 1;
   return new Date(year, mes - 1, dia);
 }
-
 function sumarDias_(fecha, dias) {
   const d = new Date(fecha.getTime());
   d.setDate(d.getDate() + dias);
@@ -45,7 +44,7 @@ function formatoFecha_(d) {
 function festivosColombia_(year) {
   const pascua = calcularPascua_(year);
   const fijos = [
-    new Date(year, 0, 1), // Ano nuevo
+    new Date(year, 0, 1), // Año nuevo
     new Date(year, 4, 1), // Dia del trabajo
     new Date(year, 6, 20), // Independencia
     new Date(year, 7, 7), // Batalla de Boyaca
@@ -71,7 +70,6 @@ function festivosColombia_(year) {
   fijos.concat(trasladables).forEach((d) => set.add(formatoFecha_(d)));
   return set;
 }
-
 const cacheFestivos_ = {};
 function esFestivoColombia(fechaStr) {
   const year = Number(fechaStr.slice(0, 4));
@@ -111,7 +109,6 @@ function horaADecimal_(hhmmss) {
 
 function minHora_(horas) { return horas.reduce((a, b) => (b < a ? b : a)); }
 function maxHora_(horas) { return horas.reduce((a, b) => (b > a ? b : a)); }
-
 function agruparPorTrabajadorYFecha_(registros) {
   const grupos = {};
   registros.forEach((r) => {
@@ -146,12 +143,11 @@ function calcularLiquidacion({ trabajadores, registros, desde, hasta, seleccion 
     incompletos.sort((a, b) => (a.fecha + a.trabajador) < (b.fecha + b.trabajador) ? -1 : 1);
     return { ok: false, incompletos };
   }
-
   const porTrabajador = {};
   seleccion.forEach((nombre) => {
     porTrabajador[nombre] = {
       nombre, valorSemanal: valorPorNombre[nombre] || 0, dias: [],
-      totalDiasTrabajados: 0, totalValorDias: 0, totalHorasExtra: 0, totalValorExtra: 0, totalPagar: 0,
+      totalDiasTrabajados: 0, totalValorDias: 0, totalDescuentos: 0, totalHorasExtra: 0, totalValorExtra: 0, totalPagar: 0,
     };
   });
 
@@ -169,26 +165,39 @@ function calcularLiquidacion({ trabajadores, registros, desde, hasta, seleccion 
     const horaEntradaDec = horaADecimal_(horaEntradaTexto);
     const horaSalidaDec = horaADecimal_(horaSalidaTexto);
 
-    const retrasoMin = Math.max(0, Math.round((horaEntradaDec - 7) * 60));
-    const horasExtra = Math.max(0, Math.round((horaSalidaDec - horaCorte) * 100) / 100);
     const valorHoraBase = horasNormales > 0 ? valorDia / horasNormales : 0;
+
+    // Llegada tarde: se descuenta proporcionalmente desde las 7:00am.
+    const retrasoMin = Math.max(0, Math.round((horaEntradaDec - 7) * 60));
+    const descuentoRetraso = Math.round((retrasoMin / 60) * valorHoraBase * 100) / 100;
+
+    // Salida antes de la hora de corte: se descuenta proporcionalmente.
+    // Si sale despues de la hora de corte, en cambio, se le paga como hora extra.
+    const salidaTempranoMin = Math.max(0, Math.round((horaCorte - horaSalidaDec) * 60));
+    const descuentoSalidaTemprano = Math.round((salidaTempranoMin / 60) * valorHoraBase * 100) / 100;
+    const horasExtra = Math.max(0, Math.round((horaSalidaDec - horaCorte) * 100) / 100);
     const valorExtra = Math.round(horasExtra * valorHoraBase * 100) / 100;
 
+    const descuentoTotal = Math.round((descuentoRetraso + descuentoSalidaTemprano) * 100) / 100;
+    const valorNeto = Math.round((Math.max(0, valorDia - descuentoTotal) + valorExtra) * 100) / 100;
     t.dias.push({
       fecha: g.fecha, diaSemana: nombreDiaSemana(g.fecha), tipoDia: tipo,
       horaEntrada: horaEntradaTexto, horaSalida: horaSalidaTexto,
-      valorDia, horasExtra, valorExtra, retrasoMin,
+      valorDia, retrasoMin, descuentoRetraso, salidaTempranoMin, descuentoSalidaTemprano,
+      descuentoTotal, horasExtra, valorExtra, valorNeto,
     });
     t.totalDiasTrabajados += 1;
     t.totalValorDias += valorDia;
+    t.totalDescuentos += descuentoTotal;
     t.totalHorasExtra += horasExtra;
     t.totalValorExtra += valorExtra;
-    t.totalPagar += valorDia + valorExtra;
+    t.totalPagar += valorNeto;
   });
 
   Object.values(porTrabajador).forEach((t) => {
     t.dias.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
     t.totalValorDias = Math.round(t.totalValorDias * 100) / 100;
+    t.totalDescuentos = Math.round(t.totalDescuentos * 100) / 100;
     t.totalValorExtra = Math.round(t.totalValorExtra * 100) / 100;
     t.totalPagar = Math.round(t.totalPagar * 100) / 100;
   });
@@ -199,4 +208,3 @@ function calcularLiquidacion({ trabajadores, registros, desde, hasta, seleccion 
 }
 
 module.exports = { calcularLiquidacion, esFestivoColombia, tipoDia, nombreDiaSemana };
-
