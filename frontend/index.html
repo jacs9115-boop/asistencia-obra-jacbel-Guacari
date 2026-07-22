@@ -87,6 +87,17 @@
   .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4);
     border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .pdf-preview { position: fixed; inset: 0; background: var(--bg); z-index: 50; display: none;
+    flex-direction: column; }
+  .pdf-preview.open { display: flex; }
+  .pdf-preview-header { display: flex; align-items: center; justify-content: space-between;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px; background: var(--navy); color: #fff;
+    font-weight: 700; font-size: 15px; }
+  .pdf-preview-cerrar { background: none; border: none; color: #fff; font-size: 18px; padding: 4px 8px; }
+  .pdf-preview-frame { flex: 1; width: 100%; border: none; background: #525659; }
+  .pdf-preview-acciones { display: flex; gap: 10px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+    background: var(--card); border-top: 1px solid var(--border); }
+  .pdf-preview-acciones .btn-primary, .pdf-preview-acciones .btn-secondary { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -186,6 +197,18 @@
   <button type="button" class="btn-secondary" id="btnCerrarLiquidacion">Cerrar</button>
 </div>
 
+<div class="pdf-preview" id="pdfPreview">
+  <div class="pdf-preview-header">
+    <span>Vista previa</span>
+    <button type="button" class="pdf-preview-cerrar" id="btnCerrarPreview">✕</button>
+  </div>
+  <iframe id="pdfPreviewFrame" class="pdf-preview-frame"></iframe>
+  <div class="pdf-preview-acciones">
+    <button type="button" class="btn-secondary" id="btnDescargarPreview">Descargar</button>
+    <button type="button" class="btn-primary" id="btnCompartirPreview">Compartir</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="overlay-carga" id="overlayCarga"></div>
 
@@ -211,10 +234,16 @@ const statusLiquidacion = document.getElementById("statusLiquidacion");
 const fotoMarcaInput = document.getElementById("fotoMarcaInput");
 const toast = document.getElementById("toast");
 const overlayCarga = document.getElementById("overlayCarga");
+const pdfPreview = document.getElementById("pdfPreview");
+const pdfPreviewFrame = document.getElementById("pdfPreviewFrame");
+const btnCerrarPreview = document.getElementById("btnCerrarPreview");
+const btnDescargarPreview = document.getElementById("btnDescargarPreview");
+const btnCompartirPreview = document.getElementById("btnCompartirPreview");
 
 let trabajadoresActuales = [];
 let pendingMark = null;
 let currentPosition = null;
+let pdfPreviewActual = null; // { blob, nombreArchivo, blobUrl }
 function mostrarToast(msg, esError) {
   toast.textContent = msg;
   toast.className = "toast show" + (esError ? " error" : "");
@@ -501,17 +530,45 @@ async function compartirOGuardarPDF_(blob, nombreArchivo, tituloCompartir) {
     if (shareErr && shareErr.name === "AbortError") {
       // el usuario cerro el menu de compartir, no hacer nada mas
     } else {
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = nombreArchivo;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      descargarPDF_(blob, nombreArchivo);
     }
   }
 }
+
+function descargarPDF_(blob, nombreArchivo) {
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+}
+
+function abrirPdfPreview_(blob, nombreArchivo) {
+  const blobUrl = URL.createObjectURL(blob);
+  pdfPreviewActual = { blob, nombreArchivo, blobUrl };
+  pdfPreviewFrame.src = blobUrl;
+  pdfPreview.classList.add("open");
+}
+function cerrarPdfPreview_() {
+  pdfPreview.classList.remove("open");
+  pdfPreviewFrame.src = "about:blank";
+  if (pdfPreviewActual) {
+    URL.revokeObjectURL(pdfPreviewActual.blobUrl);
+    pdfPreviewActual = null;
+  }
+}
+btnCerrarPreview.addEventListener("click", cerrarPdfPreview_);
+btnDescargarPreview.addEventListener("click", () => {
+  if (!pdfPreviewActual) return;
+  descargarPDF_(pdfPreviewActual.blob, pdfPreviewActual.nombreArchivo);
+});
+btnCompartirPreview.addEventListener("click", async () => {
+  if (!pdfPreviewActual) return;
+  await compartirOGuardarPDF_(pdfPreviewActual.blob, pdfPreviewActual.nombreArchivo, "Liquidación de nómina");
+});
 document.getElementById("btnGenerarLiquidacion").addEventListener("click", async () => {
   const desde = document.getElementById("liqDesde").value;
   const hasta = document.getElementById("liqHasta").value;
@@ -543,8 +600,8 @@ document.getElementById("btnGenerarLiquidacion").addEventListener("click", async
     }
     const blob = await res.blob();
     statusLiquidacion.textContent = "";
-    await compartirOGuardarPDF_(blob, `liquidacion-${desde}-a-${hasta}.pdf`, "Liquidación de nómina");
     cerrarLiquidacion();
+    abrirPdfPreview_(blob, `liquidacion-${desde}-a-${hasta}.pdf`);
   } catch (err) {
     statusLiquidacion.textContent = "Error: " + err.message;
   } finally {
