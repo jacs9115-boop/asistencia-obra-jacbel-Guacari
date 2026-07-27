@@ -37,6 +37,7 @@ function xColumna(idx) {
   for (let i = 0; i < idx; i++) x += COLS[i].ancho;
   return x;
 }
+
 function dibujarEncabezadoTabla(doc, y) {
   doc.fontSize(8).font("Helvetica-Bold");
   COLS.forEach((c, i) => {
@@ -56,18 +57,19 @@ function asegurarEspacio_(doc, y, alturaNecesaria, callbackEncabezado) {
   return y;
 }
 
-function generarPDFLiquidacion(res, resultado) {
+function generarPDFLiquidacion(res, resultado, nombreObra) {
   const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 40 });
   doc.pipe(res);
 
   doc.fontSize(16).font("Helvetica-Bold").fillColor("#1F4E78").text("Liquidación de Nómina", MARGEN_X, 40);
-  doc.fontSize(11).font("Helvetica").fillColor("#333").text("Asistencia Obra Guacarí", MARGEN_X, 62);
+  doc.fontSize(11).font("Helvetica").fillColor("#333").text(nombreObra || "Asistencia Obra JACBEL", MARGEN_X, 62);
   doc.fontSize(10).fillColor("#555").text(
     `Del ${formatoFechaLegible(resultado.desde)} al ${formatoFechaLegible(resultado.hasta)}  ·  Generado: ${new Date().toLocaleString("es-CO")}`,
     MARGEN_X, 80
   );
 
   let y = 110;
+
   resultado.trabajadores.forEach((t, idxTrabajador) => {
     y = asegurarEspacio_(doc, y, 90);
     if (idxTrabajador > 0) y += 10;
@@ -86,6 +88,7 @@ function generarPDFLiquidacion(res, resultado) {
       doc.fontSize(9).font("Helvetica").fillColor("#888").text("Sin días registrados en este rango.", MARGEN_X, y);
       y += 20;
     }
+
     t.dias.forEach((d) => {
       const filaAltura = d.descuentoTotal > 0 ? 26 : 15;
       y = asegurarEspacio_(doc, y, filaAltura, (nuevaY) => dibujarEncabezadoTabla(doc, nuevaY));
@@ -105,6 +108,7 @@ function generarPDFLiquidacion(res, resultado) {
       doc.font("Helvetica-Bold").text(formatoMoneda(d.valorNeto), xColumna(9), y, { width: COLS[9].ancho });
       doc.font("Helvetica");
       y += 13;
+
       if (d.descuentoTotal > 0) {
         const partes = [];
         if (d.retrasoMin > 0) partes.push(`llegó ${d.retrasoMin} min tarde (-${formatoMoneda(d.descuentoRetraso)})`);
@@ -134,6 +138,7 @@ function generarPDFLiquidacion(res, resultado) {
     doc.fontSize(11).fillColor("#1F4E78").text(`TOTAL A PAGAR: ${formatoMoneda(t.totalPagar)}`, MARGEN_X, y);
     y += 24;
   });
+
   if (resultado.trabajadores.length > 1) {
     y = asegurarEspacio_(doc, y, 40 + resultado.trabajadores.length * 16);
     y += 10;
