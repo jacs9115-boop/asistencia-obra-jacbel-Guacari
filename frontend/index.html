@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Asistencia Obra Guacarí</title>
+<title>Asistencia Obra JACBEL</title>
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/icon-180.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -36,11 +36,13 @@
   body { padding-bottom: 30px; }
   header { position: sticky; top: 0; z-index: 5; background: var(--navy); color: #fff;
     padding: calc(14px + env(safe-area-inset-top)) 18px 14px; display: flex; align-items: center;
-    justify-content: space-between; }
-  header .brand { display: flex; align-items: center; gap: 10px; }
-  header .brand img { width: 34px; height: 34px; border-radius: 8px; background: #fff; }
-  header h1 { font-size: 16px; margin: 0; font-weight: 700; line-height: 1.15; }
-  header .gear { background: none; border: none; color: #fff; font-size: 24px; padding: 4px 8px; }
+    justify-content: space-between; gap: 8px; }
+  header .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  header .brand img { width: 34px; height: 34px; border-radius: 8px; background: #fff; flex-shrink: 0; }
+  header .brand-text { min-width: 0; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header .subt { font-size: 11.5px; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header .gear { background: none; border: none; color: #fff; font-size: 22px; padding: 4px 6px; flex-shrink: 0; }
   main { padding: 14px; max-width: 560px; margin: 0 auto; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
     padding: 14px 16px; margin-bottom: 12px; }
@@ -64,11 +66,13 @@
   .sheet h2 { margin: 4px 0 14px; font-size: 18px; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-  input[type="text"], input[type="date"], input[type="time"], select { width: 100%; border: 1px solid var(--border); border-radius: 10px;
+  input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], input[type="time"], select {
+    width: 100%; border: 1px solid var(--border); border-radius: 10px;
     padding: 12px; font-size: 15px; background: var(--card); color: var(--text); font-family: inherit; }
   .hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
   .btn-primary { width: 100%; padding: 15px; border: none; border-radius: 12px;
     background: var(--navy); color: #fff; font-weight: 700; font-size: 16px; margin-top: 6px; }
+  .btn-primary:disabled { opacity: 0.6; }
   .btn-secondary { width: 100%; padding: 13px; border: none; border-radius: 12px;
     background: transparent; color: var(--muted); font-weight: 600; font-size: 14px; margin-top: 8px; }
   .status { text-align: center; font-size: 14px; color: var(--muted); margin-top: 10px; min-height: 20px; }
@@ -77,7 +81,7 @@
   .admin-row .quitar { color: #C0392B; background: none; border: none; font-weight: 600; font-size: 13px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     background: var(--navy); color: #fff; padding: 12px 20px; border-radius: 100px;
-    font-size: 14px; font-weight: 600; z-index: 30; display: none; box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
+    font-size: 14px; font-weight: 600; z-index: 30; display: none; box-shadow: 0 6px 18px rgba(0,0,0,0.3); max-width: 90vw; text-align: center; }
   .toast.show { display: block; }
   .toast.error { background: #C0392B; }
   .overlay-carga { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 40;
@@ -87,6 +91,7 @@
   .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4);
     border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner-navy { border-color: var(--border); border-top-color: var(--navy); }
   .pdf-preview { position: fixed; inset: 0; background: var(--bg); z-index: 50; display: none;
     flex-direction: column; }
   .pdf-preview.open { display: flex; }
@@ -98,17 +103,164 @@
   .pdf-preview-acciones { display: flex; gap: 10px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
     background: var(--card); border-top: 1px solid var(--border); }
   .pdf-preview-acciones .btn-primary, .pdf-preview-acciones .btn-secondary { margin-top: 0; }
+
+  .vista { display: none; }
+  .vista.activa { display: block; }
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-card { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 30px 24px; }
+  .login-card img { width: 56px; height: 56px; border-radius: 12px; display: block; margin: 0 auto 14px; }
+  .login-card h1 { text-align: center; font-size: 19px; margin: 0 0 22px; color: var(--navy); }
+  .obra-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; }
+  .obra-card .nombre { font-weight: 700; font-size: 16px; }
+  .obra-card .flecha { color: var(--muted); font-size: 18px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
+    background: var(--border); color: var(--muted); }
+  .badge.activo { background: #DCF3DE; color: var(--green); }
+  .badge.inactivo { background: #F8D7D7; color: #C0392B; }
+  .contratista-card { padding: 14px 16px; }
+  .contratista-card .fila-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .contratista-card .nombre { font-weight: 700; font-size: 15.5px; }
+  .contratista-card .meta { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .contratista-card .obras-lista { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .contratista-card .obra-mini { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13.5px; }
+  .contratista-card .obra-mini button { background: none; border: none; color: var(--navy); font-weight: 700; font-size: 12.5px; }
+  .link-btn { background: none; border: none; color: var(--navy); font-weight: 600; font-size: 13px; padding: 4px; }
+  .notif-row { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .notif-row .tipo { font-weight: 700; color: var(--navy); font-size: 11.5px; text-transform: uppercase; }
+  .notif-row .fecha { color: var(--muted); font-size: 11.5px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs button { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-weight: 600; font-size: 13.5px; }
+  .tabs button.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
 </style>
 </head>
 <body>
+
+<!-- ---------- LOGIN ---------- -->
+<div class="vista activa" id="vistaLogin">
+  <div class="login-wrap">
+    <div class="login-card">
+      <img src="icons/icon-180.png" alt="Logo JACBEL" />
+      <h1>Asistencia Obra JACBEL</h1>
+      <div class="field">
+        <label for="loginEmail">Correo</label>
+        <input type="email" id="loginEmail" placeholder="tucorreo@ejemplo.com" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="loginPassword">Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button type="button" class="btn-primary" id="btnLogin">Ingresar</button>
+      <div class="status" id="statusLogin"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- OBRAS (contratista) ---------- -->
+<div class="vista" id="vistaObras">
+  <header>
+    <div class="brand">
+      <img src="icons/icon-180.png" alt="Logo JACBEL" />
+      <div class="brand-text">
+        <h1 id="obrasNombreContratista">Mis obras</h1>
+        <div class="subt">Toca una obra para entrar</div>
+      </div>
+    </div>
+    <button type="button" class="gear" id="btnLogoutObras" aria-label="Cerrar sesión">🚪</button>
+  </header>
+  <main>
+    <div id="listaObras"><div class="empty">Cargando obras...</div></div>
+    <div class="card">
+      <div class="field" style="margin-bottom:10px">
+        <label for="nuevaObraNombre">Agregar nueva obra</label>
+        <input type="text" id="nuevaObraNombre" placeholder="Ej: Conjunto Los Almendros" />
+      </div>
+      <button type="button" class="btn-primary" id="btnAgregarObra" style="margin-top:0">+ Agregar obra</button>
+      <div class="status" id="statusObras"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ---------- ADMIN (JACBEL) ---------- -->
+<div class="vista" id="vistaAdmin">
+  <header>
+    <div class="brand">
+      <img src="icons/icon-180.png" alt="Logo JACBEL" />
+      <div class="brand-text">
+        <h1>Panel administrador</h1>
+        <div class="subt">JACBEL</div>
+      </div>
+    </div>
+    <button type="button" class="gear" id="btnLogoutAdmin" aria-label="Cerrar sesión">🚪</button>
+  </header>
+  <main>
+    <div class="tabs">
+      <button type="button" class="activo" id="tabContratistas">Contratistas</button>
+      <button type="button" id="tabMisObras">Mis obras</button>
+      <button type="button" id="tabNotificaciones">Notificaciones</button>
+    </div>
+
+    <div id="panelMisObras" style="display:none">
+      <div id="listaMisObras"><div class="empty">Cargando obras...</div></div>
+      <div class="card">
+        <div class="field" style="margin-bottom:10px">
+          <label for="nuevaObraAdminNombre">Agregar obra propia</label>
+          <input type="text" id="nuevaObraAdminNombre" placeholder="Ej: Guacarí" />
+        </div>
+        <button type="button" class="btn-primary" id="btnAgregarObraAdmin" style="margin-top:0">+ Agregar obra</button>
+        <div class="status" id="statusObraAdmin"></div>
+      </div>
+    </div>
+
+    <div id="panelContratistas">
+      <div id="listaContratistas"><div class="empty">Cargando contratistas...</div></div>
+      <div class="card">
+        <h2 style="margin:0 0 12px;font-size:15px">Nuevo contratista</h2>
+        <div class="field">
+          <label for="nuevoContEmail">Correo</label>
+          <input type="email" id="nuevoContEmail" placeholder="contratista@ejemplo.com" />
+        </div>
+        <div class="field">
+          <label for="nuevoContPassword">Contraseña inicial</label>
+          <input type="text" id="nuevoContPassword" placeholder="Mínimo 6 caracteres" />
+        </div>
+        <div class="field">
+          <label for="nuevoContNombre">Nombre / empresa</label>
+          <input type="text" id="nuevoContNombre" placeholder="Ej: Constructora Pérez" />
+        </div>
+        <div class="field">
+          <label for="nuevoContPlan">Plan</label>
+          <select id="nuevoContPlan">
+            <option value="autogestion">Autogestión (el contratista maneja todo)</option>
+            <option value="completo">Completo (JACBEL registra por ellos)</option>
+          </select>
+        </div>
+        <button type="button" class="btn-primary" id="btnCrearContratista" style="margin-top:0">Crear contratista</button>
+        <div class="status" id="statusNuevoContratista"></div>
+      </div>
+    </div>
+
+    <div id="panelNotificaciones" style="display:none">
+      <div id="listaNotificaciones"><div class="empty">Cargando notificaciones...</div></div>
+    </div>
+  </main>
+</div>
+
+<!-- ---------- PRINCIPAL (dentro de una obra) ---------- -->
+<div class="vista" id="vistaPrincipal">
 <header>
   <div class="brand">
-    <img src="icons/icon-180.png" alt="Logo JACBEL" />
-    <h1>Asistencia<br/>Obra Guacarí</h1>
+    <button type="button" class="gear" id="btnVolverObras" aria-label="Volver" style="font-size:20px">◀</button>
+    <div class="brand-text">
+      <h1 id="nombreObraActual">Obra</h1>
+      <div class="subt" id="subtObraActual">Asistencia</div>
+    </div>
   </div>
   <div style="display:flex;gap:2px;">
     <button type="button" class="gear" id="btnLiquidacion" aria-label="Liquidación de nómina">💰</button>
     <button type="button" class="gear" id="btnManual" aria-label="Registro manual">🕒</button>
+    <button type="button" class="gear" id="btnPin" aria-label="PIN de seguridad">🔑</button>
     <button type="button" class="gear" id="btnAdmin" aria-label="Administrar trabajadores">⚙️</button>
   </div>
 </header>
@@ -116,6 +268,7 @@
 <main id="lista">
   <div class="empty">Cargando trabajadores...</div>
 </main>
+</div>
 
 <input type="file" id="fotoMarcaInput" accept="image/*" capture="user" style="display:none" />
 
@@ -131,8 +284,8 @@
     <input type="number" id="valorSemanalAgregar" inputmode="numeric" placeholder="Ej: 300000" />
     <div class="hint">El valor del día se calcula como este valor ÷ 6 (lunes a sábado).</div>
   </div>
-  <div class="field">
-    <label for="pinAgregar">PIN de administrador</label>
+  <div class="field" id="campoPinAgregar">
+    <label for="pinAgregar">PIN de seguridad</label>
     <input type="text" id="pinAgregar" inputmode="numeric" placeholder="****" />
   </div>
   <button type="button" class="btn-primary" id="btnAgregarTrabajador">Agregar</button>
@@ -145,7 +298,7 @@
 <div class="sheet-overlay" id="overlayManual"></div>
 <div class="sheet" id="sheetManual">
   <h2>Registro manual (retroactivo)</h2>
-  <div class="hint" style="margin-bottom:14px;">Úsalo cuando no se pudo marcar asistencia ese día, o cuando llegaste tarde a registrar y la hora real de entrada fue otra. Llena la entrada, la salida, o ambas (por ejemplo si fue un día completo que no se registró). Queda guardado en el reporte marcado como "Manual".</div>
+  <div class="hint" style="margin-bottom:14px;">Úsalo cuando no se pudo marcar asistencia ese día, o cuando el encargado no alcanzó a registrar con foto. Llena la entrada, la salida, o ambas. Queda guardado en el reporte marcado como "Manual".</div>
   <div class="field">
     <label for="manualTrabajador">Trabajador</label>
     <select id="manualTrabajador"></select>
@@ -163,13 +316,30 @@
     <input type="time" id="manualHoraSalida" />
   </div>
   <div class="hint" style="margin-bottom:14px;">Debes llenar al menos una de las dos horas.</div>
-  <div class="field">
-    <label for="pinManual">PIN de administrador</label>
+  <div class="field" id="campoPinManual">
+    <label for="pinManual">PIN de seguridad</label>
     <input type="text" id="pinManual" inputmode="numeric" placeholder="****" />
   </div>
   <button type="button" class="btn-primary" id="btnGuardarManual">Guardar registro</button>
   <div class="status" id="statusManual"></div>
   <button type="button" class="btn-secondary" id="btnCerrarManual">Cerrar</button>
+</div>
+
+<div class="sheet-overlay" id="overlayPin"></div>
+<div class="sheet" id="sheetPin">
+  <h2>PIN de seguridad</h2>
+  <div class="hint" style="margin-bottom:14px;">Este PIN lo usas tú (el contratista) para agregar o quitar trabajadores y para editar horas. El encargado no lo conoce, así que no puede modificar esta información sin comunicarse contigo.</div>
+  <div class="field" id="campoPinActual" style="display:none">
+    <label for="pinActualInput">PIN actual</label>
+    <input type="text" id="pinActualInput" inputmode="numeric" placeholder="****" />
+  </div>
+  <div class="field">
+    <label for="pinNuevoInput">PIN nuevo (4 a 6 dígitos)</label>
+    <input type="text" id="pinNuevoInput" inputmode="numeric" placeholder="****" />
+  </div>
+  <button type="button" class="btn-primary" id="btnGuardarPin">Guardar PIN</button>
+  <div class="status" id="statusPin"></div>
+  <button type="button" class="btn-secondary" id="btnCerrarPin">Cerrar</button>
 </div>
 
 <div class="sheet-overlay" id="overlayLiquidacion"></div>
@@ -214,6 +384,341 @@
 
 <script>
 const API_BASE = "";
+
+// ---------- Estado de sesion ----------
+let authToken = localStorage.getItem("asistencia_token") || null;
+let perfilActual = null;
+let obraActual = null; // { id, nombre }
+let volverAAdmin = false; // si el admin entro a una obra, al salir vuelve al panel admin
+
+function guardarSesion(token) {
+  authToken = token;
+  localStorage.setItem("asistencia_token", token);
+}
+function borrarSesion() {
+  authToken = null;
+  perfilActual = null;
+  obraActual = null;
+  localStorage.removeItem("asistencia_token");
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = Object.assign({}, options.headers || {});
+  if (authToken) headers["Authorization"] = "Bearer " + authToken;
+  const res = await fetch(API_BASE + path, Object.assign({}, options, { headers }));
+  if (res.status === 401) {
+    borrarSesion();
+    mostrarVista("vistaLogin");
+    throw new Error("Tu sesión expiró, vuelve a iniciar sesión");
+  }
+  return res;
+}
+async function apiJson(path, options = {}) {
+  const opts = Object.assign({}, options);
+  if (opts.body && typeof opts.body !== "string" && !(opts.body instanceof FormData)) {
+    opts.body = JSON.stringify(opts.body);
+  }
+  if (!(opts.body instanceof FormData)) {
+    opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+  }
+  const res = await apiFetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Ocurrió un error");
+  return data;
+}
+
+function mostrarVista(id) {
+  document.querySelectorAll(".vista").forEach((v) => v.classList.remove("activa"));
+  document.getElementById(id).classList.add("activa");
+}
+
+function mostrarToast(msg, esError) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.className = "toast show" + (esError ? " error" : "");
+  setTimeout(() => { toast.className = "toast"; }, 3200);
+}
+function mostrarCarga(msg) {
+  const overlayCarga = document.getElementById("overlayCarga");
+  overlayCarga.innerHTML = '<div><span class="spinner"></span>' + msg + '</div>';
+  overlayCarga.classList.add("show");
+}
+function ocultarCarga() {
+  document.getElementById("overlayCarga").classList.remove("show");
+}
+function formatoMoneda_(v) {
+  return "$" + Math.round(v || 0).toLocaleString("es-CO");
+}
+function hoyLocal_() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// ================= LOGIN =================
+
+const statusLogin = document.getElementById("statusLogin");
+document.getElementById("btnLogin").addEventListener("click", async () => {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  if (!email || !password) { statusLogin.textContent = "Escribe tu correo y contraseña."; return; }
+  statusLogin.innerHTML = '<span class="spinner spinner-navy"></span> Ingresando...';
+  try {
+    const res = await fetch(API_BASE + "/api/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "No se pudo iniciar sesión");
+    guardarSesion(data.token);
+    perfilActual = data.perfil;
+    statusLogin.textContent = "";
+    document.getElementById("loginPassword").value = "";
+    entrarSegunRol();
+  } catch (err) {
+    statusLogin.textContent = "Error: " + err.message;
+  }
+});
+
+async function intentarSesionGuardada() {
+  if (!authToken) return;
+  try {
+    const res = await apiFetch("/api/me");
+    if (!res.ok) { borrarSesion(); return; }
+    perfilActual = await res.json();
+    entrarSegunRol();
+  } catch (e) {
+    borrarSesion();
+  }
+}
+
+function entrarSegunRol() {
+  if (perfilActual.rol === "admin") {
+    mostrarVista("vistaAdmin");
+    cargarPanelAdmin();
+  } else {
+    document.getElementById("obrasNombreContratista").textContent = perfilActual.nombre || "Mis obras";
+    mostrarVista("vistaObras");
+    cargarObras();
+  }
+}
+
+function cerrarSesion() {
+  borrarSesion();
+  document.getElementById("loginEmail").value = "";
+  document.getElementById("loginPassword").value = "";
+  mostrarVista("vistaLogin");
+}
+document.getElementById("btnLogoutObras").addEventListener("click", cerrarSesion);
+document.getElementById("btnLogoutAdmin").addEventListener("click", cerrarSesion);
+
+// ================= OBRAS (contratista) =================
+
+async function cargarObras() {
+  const cont = document.getElementById("listaObras");
+  cont.innerHTML = '<div class="empty">Cargando obras...</div>';
+  try {
+    const obras = await apiJson("/api/obras");
+    if (!obras.length) {
+      cont.innerHTML = '<div class="card empty">Todavía no tienes obras.<br/>Agrega la primera abajo.</div>';
+      return;
+    }
+    cont.innerHTML = obras.map((o) => `
+      <div class="card obra-card" onclick="entrarAObra('${o.id}', '${(o.nombre || "").replace(/'/g, "\\'")}')">
+        <div class="nombre">${o.nombre}</div>
+        <div class="flecha">›</div>
+      </div>`).join("");
+  } catch (err) {
+    cont.innerHTML = '<div class="card empty">No se pudo cargar tus obras.</div>';
+  }
+}
+
+document.getElementById("btnAgregarObra").addEventListener("click", async () => {
+  const nombre = document.getElementById("nuevaObraNombre").value.trim();
+  const statusObras = document.getElementById("statusObras");
+  if (!nombre) { statusObras.textContent = "Escribe el nombre de la obra."; return; }
+  statusObras.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
+  try {
+    await apiJson("/api/obras", { method: "POST", body: { nombre } });
+    document.getElementById("nuevaObraNombre").value = "";
+    statusObras.textContent = "";
+    cargarObras();
+  } catch (err) {
+    statusObras.textContent = "Error: " + err.message;
+  }
+});
+
+function entrarAObra(id, nombre) {
+  obraActual = { id, nombre };
+  volverAAdmin = perfilActual.rol === "admin";
+  document.getElementById("nombreObraActual").textContent = nombre;
+  document.getElementById("subtObraActual").textContent = perfilActual.rol === "admin" ? "Modo administrador" : "Asistencia diaria";
+  document.getElementById("campoPinAgregar").style.display = perfilActual.rol === "admin" ? "none" : "";
+  document.getElementById("campoPinManual").style.display = perfilActual.rol === "admin" ? "none" : "";
+  document.getElementById("btnPin").style.display = perfilActual.rol === "admin" ? "none" : "";
+  mostrarVista("vistaPrincipal");
+  cargarTrabajadores();
+}
+window.entrarAObra = entrarAObra;
+
+document.getElementById("btnVolverObras").addEventListener("click", () => {
+  obraActual = null;
+  if (volverAAdmin) {
+    mostrarVista("vistaAdmin");
+    cargarPanelAdmin();
+  } else {
+    mostrarVista("vistaObras");
+    cargarObras();
+  }
+});
+
+// ================= ADMIN (JACBEL) =================
+
+function activarTabAdmin_(idActivo) {
+  ["tabContratistas", "tabMisObras", "tabNotificaciones"].forEach((id) => {
+    document.getElementById(id).classList.toggle("activo", id === idActivo);
+  });
+  document.getElementById("panelContratistas").style.display = idActivo === "tabContratistas" ? "" : "none";
+  document.getElementById("panelMisObras").style.display = idActivo === "tabMisObras" ? "" : "none";
+  document.getElementById("panelNotificaciones").style.display = idActivo === "tabNotificaciones" ? "" : "none";
+}
+document.getElementById("tabContratistas").addEventListener("click", () => activarTabAdmin_("tabContratistas"));
+document.getElementById("tabMisObras").addEventListener("click", () => { activarTabAdmin_("tabMisObras"); cargarMisObrasAdmin(); });
+document.getElementById("tabNotificaciones").addEventListener("click", () => { activarTabAdmin_("tabNotificaciones"); cargarNotificaciones(); });
+
+function cargarPanelAdmin() {
+  cargarContratistas();
+}
+
+async function cargarMisObrasAdmin() {
+  const cont = document.getElementById("listaMisObras");
+  cont.innerHTML = '<div class="empty">Cargando obras...</div>';
+  try {
+    const obras = await apiJson("/api/obras");
+    if (!obras.length) {
+      cont.innerHTML = '<div class="card empty">Todavía no tienes obras propias.<br/>Agrega la primera abajo.</div>';
+      return;
+    }
+    cont.innerHTML = obras.map((o) => `
+      <div class="card obra-card" onclick="entrarAObra('${o.id}', '${(o.nombre || "").replace(/'/g, "\\'")}')">
+        <div class="nombre">${o.nombre}</div>
+        <div class="flecha">›</div>
+      </div>`).join("");
+  } catch (err) {
+    cont.innerHTML = '<div class="card empty">No se pudo cargar tus obras.</div>';
+  }
+}
+
+document.getElementById("btnAgregarObraAdmin").addEventListener("click", async () => {
+  const nombre = document.getElementById("nuevaObraAdminNombre").value.trim();
+  const statusObraAdmin = document.getElementById("statusObraAdmin");
+  if (!nombre) { statusObraAdmin.textContent = "Escribe el nombre de la obra."; return; }
+  statusObraAdmin.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
+  try {
+    await apiJson("/api/obras", { method: "POST", body: { nombre } });
+    document.getElementById("nuevaObraAdminNombre").value = "";
+    statusObraAdmin.textContent = "";
+    cargarMisObrasAdmin();
+  } catch (err) {
+    statusObraAdmin.textContent = "Error: " + err.message;
+  }
+});
+
+async function cargarContratistas() {
+  const cont = document.getElementById("listaContratistas");
+  cont.innerHTML = '<div class="empty">Cargando contratistas...</div>';
+  try {
+    const contratistas = await apiJson("/api/admin/contratistas");
+    if (!contratistas.length) {
+      cont.innerHTML = '<div class="card empty">Todavía no hay contratistas registrados.</div>';
+      return;
+    }
+    cont.innerHTML = contratistas.map((c) => `
+      <div class="card contratista-card">
+        <div class="fila-top">
+          <div>
+            <div class="nombre">${c.nombre}</div>
+            <div class="meta">Plan ${c.plan === "completo" ? "completo" : "autogestión"} · ${c.numTrabajadores} trabajador(es)</div>
+          </div>
+          <span class="badge ${c.activo ? "activo" : "inactivo"}">${c.activo ? "Activo" : "Inactivo"}</span>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:8px">
+          <button type="button" class="link-btn" onclick="editarContratista('${c.id}', '${c.plan}', ${c.activo})">Editar plan / estado</button>
+        </div>
+        <div class="obras-lista">
+          ${c.obras.length ? c.obras.map((o) => `
+            <div class="obra-mini">
+              <span>${o.nombre}</span>
+              <button type="button" onclick="entrarAObra('${o.id}', '${(o.nombre || "").replace(/'/g, "\\'")}')">Entrar ›</button>
+            </div>`).join("") : '<div class="obra-mini" style="color:var(--muted)">Sin obras todavía</div>'}
+        </div>
+      </div>`).join("");
+  } catch (err) {
+    cont.innerHTML = '<div class="card empty">No se pudo cargar la lista.</div>';
+  }
+}
+
+async function editarContratista(id, planActual, activoActual) {
+  const plan = prompt('Plan ("autogestion" o "completo"):', planActual);
+  if (plan === null) return;
+  const activoTexto = prompt('¿Cuenta activa? escribe "si" o "no":', activoActual ? "si" : "no");
+  if (activoTexto === null) return;
+  try {
+    await apiJson(`/api/admin/contratistas/${id}`, {
+      method: "PUT",
+      body: { plan: plan.trim(), activo: activoTexto.trim().toLowerCase() === "si" },
+    });
+    mostrarToast("Contratista actualizado ✓");
+    cargarContratistas();
+  } catch (err) {
+    mostrarToast("Error: " + err.message, true);
+  }
+}
+window.editarContratista = editarContratista;
+
+document.getElementById("btnCrearContratista").addEventListener("click", async () => {
+  const email = document.getElementById("nuevoContEmail").value.trim();
+  const password = document.getElementById("nuevoContPassword").value;
+  const nombre = document.getElementById("nuevoContNombre").value.trim();
+  const plan = document.getElementById("nuevoContPlan").value;
+  const statusNuevo = document.getElementById("statusNuevoContratista");
+  if (!email || !password || !nombre) { statusNuevo.textContent = "Completa correo, contraseña y nombre."; return; }
+  if (password.length < 6) { statusNuevo.textContent = "La contraseña debe tener al menos 6 caracteres."; return; }
+  statusNuevo.innerHTML = '<span class="spinner spinner-navy"></span> Creando...';
+  try {
+    await apiJson("/api/admin/contratistas", { method: "POST", body: { email, password, nombre, plan } });
+    statusNuevo.textContent = "Contratista creado ✓";
+    document.getElementById("nuevoContEmail").value = "";
+    document.getElementById("nuevoContPassword").value = "";
+    document.getElementById("nuevoContNombre").value = "";
+    cargarContratistas();
+  } catch (err) {
+    statusNuevo.textContent = "Error: " + err.message;
+  }
+});
+
+async function cargarNotificaciones() {
+  const cont = document.getElementById("listaNotificaciones");
+  cont.innerHTML = '<div class="empty">Cargando notificaciones...</div>';
+  try {
+    const notifs = await apiJson("/api/admin/notificaciones");
+    if (!notifs.length) {
+      cont.innerHTML = '<div class="card empty">No hay notificaciones todavía.</div>';
+      return;
+    }
+    cont.innerHTML = '<div class="card">' + notifs.map((n) => `
+      <div class="notif-row">
+        <div class="tipo">${n.tipo.replace(/_/g, " ")} · ${n.contratista}${n.obra ? " · " + n.obra : ""}</div>
+        <div>${n.mensaje}</div>
+        <div class="fecha">${new Date(n.fecha).toLocaleString("es-CO")}</div>
+      </div>`).join("") + '</div>';
+  } catch (err) {
+    cont.innerHTML = '<div class="card empty">No se pudo cargar las notificaciones.</div>';
+  }
+}
+
+// ================= PRINCIPAL (dentro de obra) =================
+
 const overlayAdmin = document.getElementById("overlayAdmin");
 const sheetAdmin = document.getElementById("sheetAdmin");
 const btnAdmin = document.getElementById("btnAdmin");
@@ -231,9 +736,12 @@ const sheetLiquidacion = document.getElementById("sheetLiquidacion");
 const btnLiquidacion = document.getElementById("btnLiquidacion");
 const btnCerrarLiquidacion = document.getElementById("btnCerrarLiquidacion");
 const statusLiquidacion = document.getElementById("statusLiquidacion");
+const overlayPin = document.getElementById("overlayPin");
+const sheetPin = document.getElementById("sheetPin");
+const btnPin = document.getElementById("btnPin");
+const btnCerrarPin = document.getElementById("btnCerrarPin");
+const statusPin = document.getElementById("statusPin");
 const fotoMarcaInput = document.getElementById("fotoMarcaInput");
-const toast = document.getElementById("toast");
-const overlayCarga = document.getElementById("overlayCarga");
 const pdfPreview = document.getElementById("pdfPreview");
 const pdfPreviewFrame = document.getElementById("pdfPreviewFrame");
 const btnCerrarPreview = document.getElementById("btnCerrarPreview");
@@ -243,19 +751,7 @@ const btnCompartirPreview = document.getElementById("btnCompartirPreview");
 let trabajadoresActuales = [];
 let pendingMark = null;
 let currentPosition = null;
-let pdfPreviewActual = null; // { blob, nombreArchivo, blobUrl }
-function mostrarToast(msg, esError) {
-  toast.textContent = msg;
-  toast.className = "toast show" + (esError ? " error" : "");
-  setTimeout(() => { toast.className = "toast"; }, 3200);
-}
-function mostrarCarga(msg) {
-  overlayCarga.innerHTML = '<div><span class="spinner"></span>' + msg + '</div>';
-  overlayCarga.classList.add("show");
-}
-function ocultarCarga() {
-  overlayCarga.classList.remove("show");
-}
+let pdfPreviewActual = null;
 
 function abrirAdmin() {
   overlayAdmin.classList.add("open");
@@ -271,14 +767,9 @@ btnAdmin.addEventListener("click", abrirAdmin);
 btnCerrarAdmin.addEventListener("click", cerrarAdmin);
 overlayAdmin.addEventListener("click", cerrarAdmin);
 
-function hoyLocal_() {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
 function poblarSelectTrabajadores() {
   const sel = document.getElementById("manualTrabajador");
-  sel.innerHTML = trabajadoresActuales.map((t) => `<option value="${t.nombre.replace(/"/g, '&quot;')}">${t.nombre}</option>`).join("");
+  sel.innerHTML = trabajadoresActuales.map((t) => `<option value="${t.id}">${t.nombre}</option>`).join("");
 }
 function abrirManual() {
   poblarSelectTrabajadores();
@@ -298,38 +789,70 @@ btnManual.addEventListener("click", abrirManual);
 btnCerrarManual.addEventListener("click", cerrarManual);
 overlayManual.addEventListener("click", cerrarManual);
 
-async function guardarMarcaManual_(trabajador, tipo, fecha, hora, pin) {
-  const res = await fetch(API_BASE + "/api/marcar-manual", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ trabajador, tipo, fecha, hora, pin }),
+async function guardarMarcaManual_(trabajadorId, tipo, fecha, hora, pin) {
+  await apiJson(`/api/obras/${obraActual.id}/marcar-manual`, {
+    method: "POST", body: { trabajadorId, tipo, fecha, hora, motivo: "", pin },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Error al guardar");
 }
+
 btnGuardarManual.addEventListener("click", async () => {
-  const trabajador = document.getElementById("manualTrabajador").value;
+  const trabajadorId = document.getElementById("manualTrabajador").value;
+  const trabajadorNombre = (trabajadoresActuales.find((t) => t.id === trabajadorId) || {}).nombre || "";
   const fecha = document.getElementById("manualFecha").value;
   const horaEntrada = document.getElementById("manualHoraEntrada").value;
   const horaSalida = document.getElementById("manualHoraSalida").value;
   const pin = document.getElementById("pinManual").value.trim();
-  if (!trabajador) { statusManual.textContent = "No hay trabajadores para elegir."; return; }
+  if (!trabajadorId) { statusManual.textContent = "No hay trabajadores para elegir."; return; }
   if (!fecha) { statusManual.textContent = "Escribe la fecha."; return; }
   if (!horaEntrada && !horaSalida) { statusManual.textContent = "Escribe al menos una hora (entrada o salida)."; return; }
-  if (!pin) { statusManual.textContent = "Escribe el PIN de administrador."; return; }
-  statusManual.innerHTML = '<span class="spinner" style="border-top-color:var(--navy);border-color:var(--border)"></span> Guardando...';
+  statusManual.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
   try {
     const partes = [];
-    if (horaEntrada) { await guardarMarcaManual_(trabajador, "Entrada", fecha, horaEntrada, pin); partes.push(`Entrada ${horaEntrada}`); }
-    if (horaSalida) { await guardarMarcaManual_(trabajador, "Salida", fecha, horaSalida, pin); partes.push(`Salida ${horaSalida}`); }
+    if (horaEntrada) { await guardarMarcaManual_(trabajadorId, "Entrada", fecha, horaEntrada, pin); partes.push(`Entrada ${horaEntrada}`); }
+    if (horaSalida) { await guardarMarcaManual_(trabajadorId, "Salida", fecha, horaSalida, pin); partes.push(`Salida ${horaSalida}`); }
     statusManual.textContent = "";
     cerrarManual();
-    mostrarToast(`✓ Registro manual guardado: ${trabajador} - ${partes.join(" / ")} (${fecha})`);
+    mostrarToast(`✓ Registro manual guardado: ${trabajadorNombre} - ${partes.join(" / ")} (${fecha})`);
     cargarTrabajadores();
   } catch (err) {
     statusManual.textContent = "Error: " + err.message;
   }
 });
+
+// ---------- PIN de seguridad ----------
+
+function abrirPin() {
+  document.getElementById("campoPinActual").style.display = perfilActual.pin_seguridad_hash ? "" : "none";
+  document.getElementById("pinActualInput").value = "";
+  document.getElementById("pinNuevoInput").value = "";
+  statusPin.textContent = "";
+  overlayPin.classList.add("open");
+  sheetPin.classList.add("open");
+}
+function cerrarPin() {
+  overlayPin.classList.remove("open");
+  sheetPin.classList.remove("open");
+}
+btnPin.addEventListener("click", abrirPin);
+btnCerrarPin.addEventListener("click", cerrarPin);
+overlayPin.addEventListener("click", cerrarPin);
+
+document.getElementById("btnGuardarPin").addEventListener("click", async () => {
+  const pinActual = document.getElementById("pinActualInput").value.trim();
+  const pinNuevo = document.getElementById("pinNuevoInput").value.trim();
+  if (!/^\d{4,6}$/.test(pinNuevo)) { statusPin.textContent = "El PIN debe tener entre 4 y 6 dígitos."; return; }
+  statusPin.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
+  try {
+    await apiJson("/api/perfil/pin", { method: "PUT", body: { pinActual, pinNuevo } });
+    perfilActual.pin_seguridad_hash = "x";
+    statusPin.textContent = "";
+    mostrarToast("PIN actualizado ✓");
+    cerrarPin();
+  } catch (err) {
+    statusPin.textContent = "Error: " + err.message;
+  }
+});
+
 function renderTrabajadores(trabajadores) {
   trabajadoresActuales = trabajadores;
   const main = document.getElementById("lista");
@@ -337,60 +860,52 @@ function renderTrabajadores(trabajadores) {
     main.innerHTML = '<div class="card empty">No hay trabajadores activos.<br/>Toca el engranaje ⚙️ arriba para agregar el primero.</div>';
     return;
   }
-  main.innerHTML = trabajadores.map((t) => {
-    const nombreEscapado = t.nombre.replace(/'/g, "\\'");
-    return `
+  main.innerHTML = trabajadores.map((t) => `
     <div class="card trabajador">
       <div class="left">
         <div class="nombre">${t.nombre}</div>
         <div class="estado ${t.enObra ? 'en-obra' : 'fuera'}">${t.enObra ? '🟢 En obra desde ' + (t.ultimaHora || '') : '⚪ Fuera de obra'}</div>
       </div>
       <button type="button" class="btn-marcar ${t.enObra ? 'salida' : 'entrada'}"
-        onclick="iniciarMarca('${nombreEscapado}', '${t.enObra ? 'Salida' : 'Entrada'}')">
+        onclick="iniciarMarca('${t.id}', '${t.enObra ? 'Salida' : 'Entrada'}')">
         ${t.enObra ? 'Marcar salida' : 'Marcar entrada'}
       </button>
-    </div>`;
-  }).join("");
+    </div>`).join("");
 }
 
-function formatoMoneda_(v) {
-  return "$" + Math.round(v || 0).toLocaleString("es-CO");
-}
 function renderAdminLista() {
   const cont = document.getElementById("listaAdmin");
   if (!trabajadoresActuales.length) {
     cont.innerHTML = '<div class="status">Todavía no hay trabajadores.</div>';
     return;
   }
-  cont.innerHTML = trabajadoresActuales.map((t) => {
-    const nombreEscapado = t.nombre.replace(/'/g, "\\'");
-    return `
+  cont.innerHTML = trabajadoresActuales.map((t) => `
     <div class="admin-row" style="flex-direction:column;align-items:stretch;gap:6px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-weight:600">${t.nombre}</span>
-        <button type="button" class="quitar" onclick="quitarTrabajador('${nombreEscapado}')">Quitar</button>
+        <button type="button" class="quitar" onclick="quitarTrabajador('${t.id}', '${t.nombre.replace(/'/g, "\\'")}')">Quitar</button>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)">
         <span>${formatoMoneda_(t.valorSemanal)}/semana · ${formatoMoneda_((t.valorSemanal || 0) / 6)}/día</span>
-        <button type="button" style="background:none;border:none;color:var(--navy);font-weight:600;font-size:12.5px" onclick="editarValorTrabajador('${nombreEscapado}')">Editar valor</button>
+        <button type="button" style="background:none;border:none;color:var(--navy);font-weight:600;font-size:12.5px" onclick="editarValorTrabajador('${t.id}', '${t.nombre.replace(/'/g, "\\'")}')">Editar valor</button>
       </div>
-    </div>`;
-  }).join("");
+    </div>`).join("");
 }
-async function editarValorTrabajador(nombre) {
+
+async function editarValorTrabajador(id, nombre) {
   const valorTexto = prompt(`Nuevo valor semanal para "${nombre}" (solo el número):`);
   if (valorTexto === null) return;
   const valorSemanal = Number(valorTexto.replace(/[^\d]/g, ""));
   if (!valorSemanal) { mostrarToast("Escribe un valor válido", true); return; }
-  const pin = prompt("PIN de administrador:");
-  if (!pin) return;
+  let pin = "";
+  if (perfilActual.rol !== "admin") {
+    pin = prompt("PIN de seguridad:");
+    if (!pin) return;
+  }
   try {
-    const res = await fetch(`${API_BASE}/api/trabajadores/${encodeURIComponent(nombre)}/valor`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valorSemanal, pin }),
+    await apiJson(`/api/obras/${obraActual.id}/trabajadores/${id}`, {
+      method: "PUT", body: { valorSemanal, pin },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al actualizar");
     mostrarToast("Valor semanal actualizado ✓");
     cargarTrabajadores();
   } catch (err) {
@@ -398,10 +913,10 @@ async function editarValorTrabajador(nombre) {
   }
 }
 window.editarValorTrabajador = editarValorTrabajador;
+
 async function cargarTrabajadores() {
   try {
-    const res = await fetch(API_BASE + "/api/trabajadores");
-    const data = await res.json();
+    const data = await apiJson(`/api/obras/${obraActual.id}/trabajadores`);
     renderTrabajadores(data);
     if (sheetAdmin.classList.contains("open")) renderAdminLista();
   } catch (e) {
@@ -409,8 +924,8 @@ async function cargarTrabajadores() {
   }
 }
 
-function iniciarMarca(trabajador, tipo) {
-  pendingMark = { trabajador, tipo };
+function iniciarMarca(trabajadorId, tipo) {
+  pendingMark = { trabajadorId, tipo };
   currentPosition = null;
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -422,17 +937,19 @@ function iniciarMarca(trabajador, tipo) {
   fotoMarcaInput.click();
 }
 window.iniciarMarca = iniciarMarca;
+
 fotoMarcaInput.addEventListener("change", async () => {
   const file = fotoMarcaInput.files[0];
   if (!file || !pendingMark) return;
-  const { trabajador, tipo } = pendingMark;
+  const { trabajadorId, tipo } = pendingMark;
+  const trabajadorNombre = (trabajadoresActuales.find((t) => t.id === trabajadorId) || {}).nombre || "";
   pendingMark = null;
 
-  mostrarCarga(`Marcando ${tipo === "Entrada" ? "entrada" : "salida"} de ${trabajador}...`);
+  mostrarCarga(`Marcando ${tipo === "Entrada" ? "entrada" : "salida"} de ${trabajadorNombre}...`);
   await new Promise((r) => setTimeout(r, 600));
 
   const fd = new FormData();
-  fd.append("trabajador", trabajador);
+  fd.append("trabajadorId", trabajadorId);
   fd.append("tipo", tipo);
   if (currentPosition) {
     fd.append("lat", currentPosition.latitude);
@@ -441,11 +958,9 @@ fotoMarcaInput.addEventListener("change", async () => {
   fd.append("foto", file);
 
   try {
-    const res = await fetch(API_BASE + "/api/marcar", { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al marcar");
+    const data = await apiJson(`/api/obras/${obraActual.id}/marcar`, { method: "POST", body: fd });
     ocultarCarga();
-    mostrarToast(`✓ ${tipo} registrada: ${trabajador} (${data.hora || ""})`);
+    mostrarToast(`✓ ${tipo} registrada: ${trabajadorNombre}`);
     cargarTrabajadores();
   } catch (err) {
     ocultarCarga();
@@ -454,29 +969,27 @@ fotoMarcaInput.addEventListener("change", async () => {
     fotoMarcaInput.value = "";
   }
 });
+
 btnAgregarTrabajador.addEventListener("click", async () => {
   const nombre = document.getElementById("nuevoNombre").value.trim();
   const valorSemanal = Number(document.getElementById("valorSemanalAgregar").value) || 0;
   const pin = document.getElementById("pinAgregar").value.trim();
   if (!nombre) { statusAdmin.textContent = "Escribe el nombre del trabajador."; return; }
-  if (!pin) { statusAdmin.textContent = "Escribe el PIN de administrador."; return; }
-  statusAdmin.innerHTML = '<span class="spinner" style="border-top-color:var(--navy);border-color:var(--border)"></span> Guardando...';
+  statusAdmin.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
   try {
-    const res = await fetch(API_BASE + "/api/trabajadores", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, valorSemanal, pin }),
+    await apiJson(`/api/obras/${obraActual.id}/trabajadores`, {
+      method: "POST", body: { nombre, valorSemanal, pin },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al agregar");
     statusAdmin.textContent = "Trabajador agregado ✓";
     document.getElementById("nuevoNombre").value = "";
     document.getElementById("valorSemanalAgregar").value = "";
+    document.getElementById("pinAgregar").value = "";
     cargarTrabajadores();
   } catch (err) {
     statusAdmin.textContent = "Error: " + err.message;
   }
 });
+
 // ---------- Liquidacion de nomina ----------
 
 function abrirLiquidacion() {
@@ -518,6 +1031,7 @@ function renderListaLiquidacionTrabajadores() {
 document.getElementById("liqTodos").addEventListener("change", (e) => {
   document.querySelectorAll(".liq-check").forEach((cb) => { cb.checked = e.target.checked; });
 });
+
 async function compartirOGuardarPDF_(blob, nombreArchivo, tituloCompartir) {
   const file = new File([blob], nombreArchivo, { type: "application/pdf" });
   try {
@@ -569,6 +1083,7 @@ btnCompartirPreview.addEventListener("click", async () => {
   if (!pdfPreviewActual) return;
   await compartirOGuardarPDF_(pdfPreviewActual.blob, pdfPreviewActual.nombreArchivo, "Liquidación de nómina");
 });
+
 document.getElementById("btnGenerarLiquidacion").addEventListener("click", async () => {
   const desde = document.getElementById("liqDesde").value;
   const hasta = document.getElementById("liqHasta").value;
@@ -579,9 +1094,9 @@ document.getElementById("btnGenerarLiquidacion").addEventListener("click", async
 
   const btn = document.getElementById("btnGenerarLiquidacion");
   btn.disabled = true;
-  statusLiquidacion.innerHTML = '<span class="spinner" style="border-top-color:var(--navy);border-color:var(--border)"></span> Calculando liquidación...';
+  statusLiquidacion.innerHTML = '<span class="spinner spinner-navy"></span> Calculando liquidación...';
   try {
-    const res = await fetch(API_BASE + "/api/liquidacion", {
+    const res = await apiFetch(`/api/obras/${obraActual.id}/liquidacion`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ desde, hasta, seleccion }),
     });
@@ -608,17 +1123,19 @@ document.getElementById("btnGenerarLiquidacion").addEventListener("click", async
     btn.disabled = false;
   }
 });
-async function quitarTrabajador(nombre) {
-  const pin = prompt(`Escribe el PIN de administrador para quitar a "${nombre}":`);
-  if (!pin) return;
+
+async function quitarTrabajador(id, nombre) {
+  let pin = "";
+  if (perfilActual.rol !== "admin") {
+    pin = prompt(`Escribe el PIN de seguridad para quitar a "${nombre}":`);
+    if (!pin) return;
+  } else if (!confirm(`¿Quitar a "${nombre}"?`)) {
+    return;
+  }
   try {
-    const res = await fetch(`${API_BASE}/api/trabajadores/${encodeURIComponent(nombre)}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin }),
+    await apiJson(`/api/obras/${obraActual.id}/trabajadores/${id}`, {
+      method: "DELETE", body: { pin },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error al quitar");
     mostrarToast(`Trabajador quitado: ${nombre}`);
     cargarTrabajadores();
   } catch (err) {
@@ -631,8 +1148,8 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 
-cargarTrabajadores();
-setInterval(cargarTrabajadores, 30000);
+intentarSesionGuardada();
+setInterval(() => { if (obraActual) cargarTrabajadores(); }, 30000);
 </script>
 </body>
 </html>
