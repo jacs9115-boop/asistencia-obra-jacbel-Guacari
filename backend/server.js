@@ -512,6 +512,62 @@ app.get("/api/obras/:obraId/registros-rango", requireAuth, cargarObra, async (re
   }
 });
 
+app.get("/api/obras/:obraId/registros-todos", requireAuth, cargarObra, async (req, res) => {
+  try {
+    const registros = await sbSelect(
+      "registros",
+      `obra_id=eq.${req.obraId}&select=id,tipo,fecha,hora,foto_url,latitud,longitud,es_manual,trabajador_id,trabajadores(nombre)&order=fecha.desc,hora.desc&limit=1000`
+    );
+    res.json(registros.map((r) => ({
+      id: r.id, trabajadorId: r.trabajador_id, trabajador: r.trabajadores?.nombre || "",
+      tipo: r.tipo === "salida" ? "Salida" : "Entrada", fecha: r.fecha, hora: r.hora,
+      fotoUrl: r.foto_url, latitud: r.latitud, longitud: r.longitud, esManual: r.es_manual,
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+
+app.put("/api/obras/:obraId/registros/:registroId", requireAuth, cargarObra, requierePin, async (req, res) => {
+  try {
+    const { fecha, hora } = req.body;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || "")) return res.status(400).json({ error: "Fecha inválida" });
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(hora || "")) return res.status(400).json({ error: "Hora inválida" });
+    const horaFinal = hora.length === 5 ? `${hora}:00` : hora;
+
+    const antes = await sbSelect("registros", `id=eq.${req.params.registroId}&obra_id=eq.${req.obraId}&select=*`);
+    if (!antes.length) return res.status(404).json({ error: "Registro no encontrado" });
+
+    const rows = await sbUpdate("registros", `id=eq.${req.params.registroId}`, { fecha, hora: horaFinal });
+    await registrarAuditoria({
+      tabla: "registros", registroId: req.params.registroId, accion: "editar",
+      usuarioId: req.perfil.id, antes: antes[0], despues: rows[0], requirioPin: true,
+    });
+    res.json({ ok: true, registro: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+
+app.delete("/api/obras/:obraId/registros/:registroId", requireAuth, cargarObra, requierePin, async (req, res) => {
+  try {
+    const antes = await sbSelect("registros", `id=eq.${req.params.registroId}&obra_id=eq.${req.obraId}&select=*`);
+    if (!antes.length) return res.status(404).json({ error: "Registro no encontrado" });
+
+    await sbFetch(`/rest/v1/registros?id=eq.${req.params.registroId}`, { method: "DELETE" });
+    await registrarAuditoria({
+      tabla: "registros", registroId: req.params.registroId, accion: "eliminar",
+      usuarioId: req.perfil.id, antes: antes[0], requirioPin: true,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+
 // ---------- Liquidacion ----------
 
 app.post("/api/obras/:obraId/liquidacion", requireAuth, cargarObra, async (req, res) => {
