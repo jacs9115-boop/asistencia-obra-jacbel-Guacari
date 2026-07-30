@@ -260,6 +260,7 @@
   <div style="display:flex;gap:2px;">
     <button type="button" class="gear" id="btnLiquidacion" aria-label="Liquidación de nómina">💰</button>
     <button type="button" class="gear" id="btnManual" aria-label="Registro manual">🕒</button>
+    <button type="button" class="gear" id="btnRegistros" aria-label="Base de datos de registros">🗄️</button>
     <button type="button" class="gear" id="btnPin" aria-label="PIN de seguridad">🔑</button>
     <button type="button" class="gear" id="btnAdmin" aria-label="Administrar trabajadores">⚙️</button>
   </div>
@@ -340,6 +341,45 @@
   <button type="button" class="btn-primary" id="btnGuardarPin">Guardar PIN</button>
   <div class="status" id="statusPin"></div>
   <button type="button" class="btn-secondary" id="btnCerrarPin">Cerrar</button>
+</div>
+
+<div class="sheet-overlay" id="overlayRegistros"></div>
+<div class="sheet" id="sheetRegistros">
+  <h2>Base de datos de registros</h2>
+  <div class="hint" style="margin-bottom:14px;">Todos los ingresos y salidas registrados en esta obra. Toca uno para ver la foto, la ubicación, o editarlo.</div>
+  <div id="listaRegistrosBD"><div class="status">Cargando...</div></div>
+  <button type="button" class="btn-secondary" id="btnCerrarRegistros">Cerrar</button>
+</div>
+
+<div class="sheet-overlay" id="overlayRegistroDetalle"></div>
+<div class="sheet" id="sheetRegistroDetalle">
+  <h2 id="detalleTitulo">Registro</h2>
+  <div class="hint" id="detalleSubt" style="margin-bottom:14px;"></div>
+  <div id="detalleFoto" style="display:none;margin-bottom:14px;">
+    <img id="detalleFotoImg" src="" alt="Foto del registro" style="width:100%;border-radius:12px;display:block" />
+  </div>
+  <button type="button" class="btn-secondary" id="btnVerUbicacion" style="display:none">📍 Ver ubicación</button>
+
+  <div id="detalleEdicion" style="display:none;margin-top:10px;">
+    <div class="field">
+      <label for="detalleFecha">Fecha</label>
+      <input type="date" id="detalleFecha" />
+    </div>
+    <div class="field">
+      <label for="detalleHora">Hora</label>
+      <input type="time" id="detalleHora" />
+    </div>
+    <div class="field" id="campoPinDetalle">
+      <label for="pinDetalle">PIN de seguridad</label>
+      <input type="text" id="pinDetalle" inputmode="numeric" placeholder="****" />
+    </div>
+    <button type="button" class="btn-primary" id="btnGuardarDetalle">Guardar cambios</button>
+    <button type="button" class="btn-secondary" id="btnEliminarDetalle" style="color:#C0392B">🗑️ Eliminar registro</button>
+  </div>
+
+  <button type="button" class="btn-primary" id="btnEditarDetalle" style="margin-top:10px">✏️ Editar</button>
+  <div class="status" id="statusDetalle"></div>
+  <button type="button" class="btn-secondary" id="btnCerrarDetalle">Cerrar</button>
 </div>
 
 <div class="sheet-overlay" id="overlayLiquidacion"></div>
@@ -741,6 +781,14 @@ const sheetPin = document.getElementById("sheetPin");
 const btnPin = document.getElementById("btnPin");
 const btnCerrarPin = document.getElementById("btnCerrarPin");
 const statusPin = document.getElementById("statusPin");
+const overlayRegistros = document.getElementById("overlayRegistros");
+const sheetRegistros = document.getElementById("sheetRegistros");
+const btnRegistros = document.getElementById("btnRegistros");
+const btnCerrarRegistros = document.getElementById("btnCerrarRegistros");
+const overlayRegistroDetalle = document.getElementById("overlayRegistroDetalle");
+const sheetRegistroDetalle = document.getElementById("sheetRegistroDetalle");
+const btnCerrarDetalle = document.getElementById("btnCerrarDetalle");
+const statusDetalle = document.getElementById("statusDetalle");
 const fotoMarcaInput = document.getElementById("fotoMarcaInput");
 const pdfPreview = document.getElementById("pdfPreview");
 const pdfPreviewFrame = document.getElementById("pdfPreviewFrame");
@@ -752,6 +800,8 @@ let trabajadoresActuales = [];
 let pendingMark = null;
 let currentPosition = null;
 let pdfPreviewActual = null;
+let registrosActuales = [];
+let registroSeleccionado = null;
 
 function abrirAdmin() {
   overlayAdmin.classList.add("open");
@@ -850,6 +900,134 @@ document.getElementById("btnGuardarPin").addEventListener("click", async () => {
     cerrarPin();
   } catch (err) {
     statusPin.textContent = "Error: " + err.message;
+  }
+});
+
+// ---------- Base de datos de registros ----------
+
+function abrirRegistros() {
+  overlayRegistros.classList.add("open");
+  sheetRegistros.classList.add("open");
+  cargarRegistrosBD();
+}
+function cerrarRegistros() {
+  overlayRegistros.classList.remove("open");
+  sheetRegistros.classList.remove("open");
+}
+btnRegistros.addEventListener("click", abrirRegistros);
+btnCerrarRegistros.addEventListener("click", cerrarRegistros);
+overlayRegistros.addEventListener("click", cerrarRegistros);
+
+async function cargarRegistrosBD() {
+  const cont = document.getElementById("listaRegistrosBD");
+  cont.innerHTML = '<div class="status">Cargando...</div>';
+  try {
+    registrosActuales = await apiJson(`/api/obras/${obraActual.id}/registros-todos`);
+    if (!registrosActuales.length) {
+      cont.innerHTML = '<div class="card empty">Todavía no hay registros.</div>';
+      return;
+    }
+    cont.innerHTML = '<div class="card">' + registrosActuales.map((r, idx) => `
+      <div class="notif-row" style="cursor:pointer" onclick="abrirDetalleRegistro(${idx})">
+        <div class="tipo">${r.esManual ? "✍️ Manual" : "📷 Foto"} · ${r.tipo}</div>
+        <div>${r.trabajador}</div>
+        <div class="fecha">${r.fecha} ${r.hora}</div>
+      </div>`).join("") + '</div>';
+  } catch (err) {
+    cont.innerHTML = '<div class="card empty">No se pudo cargar la lista.</div>';
+  }
+}
+
+function abrirDetalleRegistro(idx) {
+  registroSeleccionado = registrosActuales[idx];
+  const r = registroSeleccionado;
+  document.getElementById("detalleTitulo").textContent = `${r.trabajador} — ${r.tipo}`;
+  document.getElementById("detalleSubt").textContent =
+    `${r.fecha} ${r.hora} · ${r.esManual ? "Registro manual" : "Registro por foto"}`;
+
+  const detalleFoto = document.getElementById("detalleFoto");
+  const btnVerUbicacion = document.getElementById("btnVerUbicacion");
+  if (r.fotoUrl) {
+    document.getElementById("detalleFotoImg").src = r.fotoUrl;
+    detalleFoto.style.display = "";
+  } else {
+    detalleFoto.style.display = "none";
+  }
+  if (r.latitud && r.longitud) {
+    btnVerUbicacion.style.display = "";
+  } else {
+    btnVerUbicacion.style.display = "none";
+  }
+
+  document.getElementById("detalleEdicion").style.display = "none";
+  document.getElementById("btnEditarDetalle").style.display = "";
+  document.getElementById("campoPinDetalle").style.display = perfilActual.rol === "admin" ? "none" : "";
+  statusDetalle.textContent = "";
+
+  overlayRegistroDetalle.classList.add("open");
+  sheetRegistroDetalle.classList.add("open");
+}
+window.abrirDetalleRegistro = abrirDetalleRegistro;
+
+function cerrarDetalle() {
+  overlayRegistroDetalle.classList.remove("open");
+  sheetRegistroDetalle.classList.remove("open");
+  registroSeleccionado = null;
+}
+btnCerrarDetalle.addEventListener("click", cerrarDetalle);
+overlayRegistroDetalle.addEventListener("click", cerrarDetalle);
+
+document.getElementById("btnVerUbicacion").addEventListener("click", () => {
+  if (!registroSeleccionado) return;
+  window.open(`https://maps.google.com/?q=${registroSeleccionado.latitud},${registroSeleccionado.longitud}`, "_blank");
+});
+
+document.getElementById("btnEditarDetalle").addEventListener("click", () => {
+  if (!registroSeleccionado) return;
+  document.getElementById("detalleFecha").value = registroSeleccionado.fecha;
+  document.getElementById("detalleHora").value = registroSeleccionado.hora.slice(0, 5);
+  document.getElementById("pinDetalle").value = "";
+  document.getElementById("detalleEdicion").style.display = "";
+  document.getElementById("btnEditarDetalle").style.display = "none";
+});
+
+document.getElementById("btnGuardarDetalle").addEventListener("click", async () => {
+  if (!registroSeleccionado) return;
+  const fecha = document.getElementById("detalleFecha").value;
+  const hora = document.getElementById("detalleHora").value;
+  const pin = document.getElementById("pinDetalle").value.trim();
+  if (!fecha || !hora) { statusDetalle.textContent = "Escribe la fecha y la hora."; return; }
+  statusDetalle.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
+  try {
+    await apiJson(`/api/obras/${obraActual.id}/registros/${registroSeleccionado.id}`, {
+      method: "PUT", body: { fecha, hora, pin },
+    });
+    statusDetalle.textContent = "";
+    mostrarToast("Registro actualizado ✓");
+    cerrarDetalle();
+    cargarRegistrosBD();
+    cargarTrabajadores();
+  } catch (err) {
+    statusDetalle.textContent = "Error: " + err.message;
+  }
+});
+
+document.getElementById("btnEliminarDetalle").addEventListener("click", async () => {
+  if (!registroSeleccionado) return;
+  if (!confirm(`¿Eliminar este registro de ${registroSeleccionado.trabajador}?`)) return;
+  const pin = document.getElementById("pinDetalle").value.trim();
+  statusDetalle.innerHTML = '<span class="spinner spinner-navy"></span> Eliminando...';
+  try {
+    await apiJson(`/api/obras/${obraActual.id}/registros/${registroSeleccionado.id}`, {
+      method: "DELETE", body: { pin },
+    });
+    statusDetalle.textContent = "";
+    mostrarToast("Registro eliminado ✓");
+    cerrarDetalle();
+    cargarRegistrosBD();
+    cargarTrabajadores();
+  } catch (err) {
+    statusDetalle.textContent = "Error: " + err.message;
   }
 });
 
