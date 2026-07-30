@@ -198,6 +198,23 @@ function horaColombiaTexto_(d) {
   return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 }
 
+// ---------- Sincronizacion opcional con Google Sheets (solo obras que lo configuren) ----------
+
+async function sincronizarConSheets_(obraId, datos) {
+  try {
+    const obraRows = await sbSelect("obras", `id=eq.${obraId}&select=sheets_webapp_url,sheets_secret`);
+    const obra = obraRows[0];
+    if (!obra || !obra.sheets_webapp_url) return;
+    await fetch(obra.sheets_webapp_url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accion: "sync_registro", secreto: obra.sheets_secret, ...datos }),
+    });
+  } catch (err) {
+    console.error("No se pudo sincronizar con Google Sheets:", err.message);
+  }
+}
+
 // ---------- Obra: pertenencia ----------
 
 async function obraPerteneceA_(obraId, perfil) {
@@ -404,6 +421,12 @@ app.post("/api/obras/:obraId/marcar", requireAuth, cargarObra, upload.single("fo
       es_manual: false, registrado_por: req.perfil.id,
     }]);
 
+    sincronizarConSheets_(req.obraId, {
+      trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada",
+      fecha: fechaColombiaTexto_(ahora), hora: horaColombiaTexto_(ahora),
+      lat: lat || "", lng: lng || "", fotoUrl, origen: "App",
+    });
+
     res.json({ ok: true, trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada", registro: filaRegistro[0] });
   } catch (err) {
     console.error(err);
@@ -436,6 +459,11 @@ app.post("/api/obras/:obraId/marcar-manual", requireAuth, cargarObra, requierePi
     await crearNotificacion({
       contratistaId: obraRows[0]?.contratista_id, obraId: req.obraId, tipo: "edicion_manual",
       mensaje: `Registro manual de ${tipoFinal} para "${trabajadores[0].nombre}" el ${fecha} ${horaFinal}${motivo ? " — " + motivo : ""}`,
+    });
+
+    sincronizarConSheets_(req.obraId, {
+      trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada",
+      fecha, hora: horaFinal, lat: "", lng: "", fotoUrl: "", origen: "Manual",
     });
 
     res.json({ ok: true, trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada", fecha, hora: horaFinal });
