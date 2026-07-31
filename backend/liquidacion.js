@@ -1,4 +1,4 @@
-// ---------- Festivos de Colombia (calculados, no hardcodeados por ano) ----------
+// ---------- Festivos de Colombia (calculados, no hardcodeados por año) ----------
 //
 // Domingo de Pascua via el algoritmo de Gauss (anonymous Gregorian algorithm).
 // A partir de ahi se ubican los festivos moviles: los que dependen
@@ -24,6 +24,7 @@ function calcularPascua_(year) {
   const dia = ((h + l - 7 * m + 114) % 31) + 1;
   return new Date(year, mes - 1, dia);
 }
+
 function sumarDias_(fecha, dias) {
   const d = new Date(fecha.getTime());
   d.setDate(d.getDate() + dias);
@@ -56,7 +57,7 @@ function festivosColombia_(year) {
   const trasladables = [
     new Date(year, 0, 6), // Reyes magos
     new Date(year, 2, 19), // San Jose
-    sumarDias_(pascua, 39), // Ascension del senor
+    sumarDias_(pascua, 39), // Ascension del señor
     sumarDias_(pascua, 60), // Corpus christi
     sumarDias_(pascua, 68), // Sagrado corazon
     new Date(year, 5, 29), // San Pedro y San Pablo
@@ -70,6 +71,7 @@ function festivosColombia_(year) {
   fijos.concat(trasladables).forEach((d) => set.add(formatoFecha_(d)));
   return set;
 }
+
 const cacheFestivos_ = {};
 function esFestivoColombia(fechaStr) {
   const year = Number(fechaStr.slice(0, 4));
@@ -109,6 +111,7 @@ function horaADecimal_(hhmmss) {
 
 function minHora_(horas) { return horas.reduce((a, b) => (b < a ? b : a)); }
 function maxHora_(horas) { return horas.reduce((a, b) => (b > a ? b : a)); }
+
 function agruparPorTrabajadorYFecha_(registros) {
   const grupos = {};
   registros.forEach((r) => {
@@ -143,6 +146,7 @@ function calcularLiquidacion({ trabajadores, registros, desde, hasta, seleccion 
     incompletos.sort((a, b) => (a.fecha + a.trabajador) < (b.fecha + b.trabajador) ? -1 : 1);
     return { ok: false, incompletos };
   }
+
   const porTrabajador = {};
   seleccion.forEach((nombre) => {
     porTrabajador[nombre] = {
@@ -180,6 +184,7 @@ function calcularLiquidacion({ trabajadores, registros, desde, hasta, seleccion 
 
     const descuentoTotal = Math.round((descuentoRetraso + descuentoSalidaTemprano) * 100) / 100;
     const valorNeto = Math.round((Math.max(0, valorDia - descuentoTotal) + valorExtra) * 100) / 100;
+
     t.dias.push({
       fecha: g.fecha, diaSemana: nombreDiaSemana(g.fecha), tipoDia: tipo,
       horaEntrada: horaEntradaTexto, horaSalida: horaSalidaTexto,
@@ -207,4 +212,7 @@ function calcularLiquidacion({ trabajadores, registros, desde, hasta, seleccion 
   return { ok: true, desde, hasta, trabajadores: resultado, granTotal };
 }
 
-module.exports = { calcularLiquidacion, esFestivoColombia, tipoDia, nombreDiaSemana };
+module.exports = {
+  calcularLiquidacion, esFestivoColombia, tipoDia, nombreDiaSemana,
+  horarioDe_, horaADecimal_, minHora_, maxHora_, agruparPorTrabajadorYFecha_,
+};
