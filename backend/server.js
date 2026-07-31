@@ -200,7 +200,7 @@ function horaColombiaTexto_(d) {
 
 // ---------- Sincronizacion opcional con Google Sheets (solo obras que lo configuren) ----------
 
-async function sincronizarConSheets_(obraId, datos) {
+async function sincronizarConSheets_(obraId, accion, datos) {
   try {
     const obraRows = await sbSelect("obras", `id=eq.${obraId}&select=sheets_webapp_url,sheets_secret`);
     const obra = obraRows[0];
@@ -208,7 +208,7 @@ async function sincronizarConSheets_(obraId, datos) {
     await fetch(obra.sheets_webapp_url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accion: "sync_registro", secreto: obra.sheets_secret, ...datos }),
+      body: JSON.stringify({ accion, secreto: obra.sheets_secret, ...datos }),
     });
   } catch (err) {
     console.error("No se pudo sincronizar con Google Sheets:", err.message);
@@ -421,7 +421,8 @@ app.post("/api/obras/:obraId/marcar", requireAuth, cargarObra, upload.single("fo
       es_manual: false, registrado_por: req.perfil.id,
     }]);
 
-    sincronizarConSheets_(req.obraId, {
+    sincronizarConSheets_(req.obraId, "sync_registro", {
+      registroId: filaRegistro[0].id,
       trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada",
       fecha: fechaColombiaTexto_(ahora), hora: horaColombiaTexto_(ahora),
       lat: lat || "", lng: lng || "", fotoUrl, origen: "App",
@@ -461,7 +462,8 @@ app.post("/api/obras/:obraId/marcar-manual", requireAuth, cargarObra, requierePi
       mensaje: `Registro manual de ${tipoFinal} para "${trabajadores[0].nombre}" el ${fecha} ${horaFinal}${motivo ? " — " + motivo : ""}`,
     });
 
-    sincronizarConSheets_(req.obraId, {
+    sincronizarConSheets_(req.obraId, "sync_registro", {
+      registroId: filaRegistro[0].id,
       trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada",
       fecha, hora: horaFinal, lat: "", lng: "", fotoUrl: "", origen: "Manual",
     });
@@ -544,6 +546,7 @@ app.put("/api/obras/:obraId/registros/:registroId", requireAuth, cargarObra, req
       tabla: "registros", registroId: req.params.registroId, accion: "editar",
       usuarioId: req.perfil.id, antes: antes[0], despues: rows[0], requirioPin: true,
     });
+    sincronizarConSheets_(req.obraId, "sync_editar_registro", { registroId: req.params.registroId, fecha, hora: horaFinal });
     res.json({ ok: true, registro: rows[0] });
   } catch (err) {
     console.error(err);
@@ -561,10 +564,46 @@ app.delete("/api/obras/:obraId/registros/:registroId", requireAuth, cargarObra, 
       tabla: "registros", registroId: req.params.registroId, accion: "eliminar",
       usuarioId: req.perfil.id, antes: antes[0], requirioPin: true,
     });
+    sincronizarConSheets_(req.obraId, "sync_eliminar_registro", { registroId: req.params.registroId });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+
+// ---------- Sincronizacion entrante: ediciones/eliminaciones hechas directo en Google Sheets ----------
+// No usa requireAuth (Apps Script no tiene sesion de usuario); se protege con el secreto por obra.
+
+app.post("/api/sheets-sync", async (req, res) => {
+  try {
+    const { secreto, accion, id, fecha, hora } = req.body;
+    if (!id) return res.status(400).json({ ok: false, error: "Falta el id del registro" });
+
+    const registros = await sbSelect("registros", `id=eq.${id}&select=*,obras(sheets_secret)`);
+    const registro = registros[0];
+    if (!registro) return res.status(404).json({ ok: false, error: "Registro no encontrado" });
+    if (!registro.obras || !secreto || registro.obras.sheets_secret !== secreto) {
+      return res.status(403).json({ ok: false, error: "No autorizado" });
+    }
+
+    if (accion === "eliminar") {
+      await sbFetch(`/rest/v1/registros?id=eq.${id}`, { method: "DELETE" });
+      return res.json({ ok: true });
+    }
+
+    if (accion === "editar") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || "")) return res.status(400).json({ ok: false, error: "Fecha inválida" });
+      if (!/^\d{2}:\d{2}(:\d{2})?$/.test(hora || "")) return res.status(400).json({ ok: false, error: "Hora inválida" });
+      const horaFinal = hora.length === 5 ? `${hora}:00` : hora;
+      await sbUpdate("registros", `id=eq.${id}`, { fecha, hora: horaFinal });
+      return res.json({ ok: true });
+    }
+
+    return res.status(400).json({ ok: false, error: "Accion no reconocida" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message || "Error inesperado" });
   }
 });
 
