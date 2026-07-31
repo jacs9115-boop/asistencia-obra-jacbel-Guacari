@@ -10,6 +10,11 @@
 // en el backend (.env local y variables de entorno de Render).
 var NOMINA_SHEETS_SECRET = "CAMBIA_ESTE_SECRETO";
 
+// ID de la hoja de calculo "Nomina JACBEL" (de la URL: .../spreadsheets/d/ESTE_ID/edit).
+// Se usa openById en vez de getActiveSpreadsheet porque este script es
+// standalone (no esta atado directamente a la hoja como contenedor).
+var NOMINA_SHEET_ID = "1C7bmIZIpGZdpezmb06kMmyZmECJ1mEHYfn_DJu19wRo";
+
 var COLUMNAS_NOMINA = [
   "Obra", "Trabajador", "Cargo", "Frecuencia de pago", "Salario",
   "Salario mensualizado", "Auxilio transporte", "Valor auxilio",
@@ -90,7 +95,7 @@ function hojaCargos_() {
 }
 
 function obtenerOCrearHoja_(nombre, encabezados) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(NOMINA_SHEET_ID);
   var sheet = ss.getSheetByName(nombre);
   if (!sheet) {
     sheet = ss.insertSheet(nombre);
