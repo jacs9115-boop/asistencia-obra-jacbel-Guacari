@@ -268,7 +268,6 @@
   </div>
   <div style="display:flex;gap:2px;">
     <button type="button" class="gear" id="btnLiquidacion" aria-label="Liquidación de nómina">💰</button>
-    <button type="button" class="gear" id="btnNomina" aria-label="Nómina">🧾</button>
     <button type="button" class="gear" id="btnManual" aria-label="Registro manual">🕒</button>
     <button type="button" class="gear" id="btnRegistros" aria-label="Base de datos de registros">🗄️</button>
     <button type="button" class="gear" id="btnPin" aria-label="PIN de seguridad">🔑</button>
@@ -293,17 +292,19 @@
   <div class="field">
     <label for="valorSemanalAgregar">Valor que gana por semana</label>
     <input type="number" id="valorSemanalAgregar" inputmode="numeric" placeholder="Ej: 300000" />
-    <div class="hint">El valor del día se calcula como este valor ÷ 6 (lunes a sábado). Esto es lo que usa la Liquidación.</div>
   </div>
-
-  <h2 style="margin-top:22px;font-size:15px">Datos de nómina (opcional)</h2>
-  <div class="hint" style="margin-top:-8px;margin-bottom:14px">Para saber cuánto te cuesta este trabajador al mes con todo y prestaciones. No afecta la Liquidación.</div>
   <div class="field">
     <label for="cargoAgregar">Cargo</label>
-    <select id="cargoAgregar"></select>
+    <select id="cargoAgregar">
+      <option value="">Selecciona un cargo</option>
+      <option value="Residente">Residente</option>
+      <option value="Maestro">Maestro</option>
+      <option value="Oficial">Oficial</option>
+      <option value="Ayudante">Ayudante</option>
+    </select>
   </div>
   <div class="field">
-    <label for="frecuenciaPagoAgregar">Se le paga cada</label>
+    <label for="frecuenciaPagoAgregar">Forma de Pago</label>
     <select id="frecuenciaPagoAgregar">
       <option value="semana">Semana</option>
       <option value="catorcenal">Catorcenal</option>
@@ -314,19 +315,6 @@
   <div class="field">
     <label for="salarioAgregar">Valor de la planilla (según lo elegido arriba)</label>
     <input type="number" id="salarioAgregar" inputmode="numeric" placeholder="Ej: 1200000" />
-  </div>
-  <div class="field">
-    <label class="checkbox-row" for="auxilioAgregar">
-      <input type="checkbox" id="auxilioAgregar" />
-      <span>Tiene auxilio de transporte</span>
-    </label>
-    <div id="campoValorAuxilioAgregar" style="display:none;margin-top:10px">
-      <input type="number" id="valorAuxilioAgregar" inputmode="numeric" placeholder="Valor del auxilio" />
-    </div>
-  </div>
-  <div class="field">
-    <label for="valorHoraExtraAgregar">Valor de la hora extra</label>
-    <input type="number" id="valorHoraExtraAgregar" inputmode="numeric" placeholder="Se sugiere automático según el valor semanal" />
   </div>
 
   <div class="field" id="campoPinAgregar">
@@ -350,16 +338,19 @@
   <div class="field">
     <label for="editValorSemanal">Valor que gana por semana</label>
     <input type="number" id="editValorSemanal" inputmode="numeric" />
-    <div class="hint">Esto es lo que usa la Liquidación.</div>
   </div>
-
-  <h2 style="margin-top:22px;font-size:15px">Datos de nómina</h2>
   <div class="field">
     <label for="editCargo">Cargo</label>
-    <select id="editCargo"></select>
+    <select id="editCargo">
+      <option value="">Selecciona un cargo</option>
+      <option value="Residente">Residente</option>
+      <option value="Maestro">Maestro</option>
+      <option value="Oficial">Oficial</option>
+      <option value="Ayudante">Ayudante</option>
+    </select>
   </div>
   <div class="field">
-    <label for="editFrecuenciaPago">Se le paga cada</label>
+    <label for="editFrecuenciaPago">Forma de Pago</label>
     <select id="editFrecuenciaPago">
       <option value="semana">Semana</option>
       <option value="catorcenal">Catorcenal</option>
@@ -370,19 +361,6 @@
   <div class="field">
     <label for="editSalario">Valor de la planilla (según lo elegido arriba)</label>
     <input type="number" id="editSalario" inputmode="numeric" />
-  </div>
-  <div class="field">
-    <label class="checkbox-row" for="editAuxilio">
-      <input type="checkbox" id="editAuxilio" />
-      <span>Tiene auxilio de transporte</span>
-    </label>
-    <div id="campoValorAuxilioEditar" style="display:none;margin-top:10px">
-      <input type="number" id="editValorAuxilio" inputmode="numeric" placeholder="Valor del auxilio" />
-    </div>
-  </div>
-  <div class="field">
-    <label for="editValorHoraExtra">Valor de la hora extra</label>
-    <input type="number" id="editValorHoraExtra" inputmode="numeric" />
   </div>
   <div class="field">
     <label for="editPctSalud">% Salud</label>
@@ -400,20 +378,6 @@
   <button type="button" class="btn-primary" id="btnGuardarEditarTrabajador">Guardar cambios</button>
   <div class="status" id="statusEditarTrabajador"></div>
   <button type="button" class="btn-secondary" id="btnCerrarEditarTrabajador">Cancelar</button>
-</div>
-
-<div class="sheet-overlay" id="overlayNomina"></div>
-<div class="sheet" id="sheetNomina">
-  <h2>Nómina</h2>
-  <div class="hint" style="margin-bottom:14px">Estimado de lo que te cuesta cada trabajador este mes, con prestaciones incluidas. Solo lo ves tú.</div>
-  <a id="linkVerSheetNomina" href="#" target="_blank" rel="noopener" class="btn-secondary" style="display:none;text-decoration:none;text-align:center">📄 Ver en Google Sheets</a>
-  <div id="listaNomina"><div class="status">Cargando...</div></div>
-
-  <h2 style="margin-top:26px;font-size:15px">Cargos y valor de planilla</h2>
-  <div id="listaCargosNomina"></div>
-  <button type="button" class="btn-secondary" id="btnAgregarCargoNomina">+ Agregar cargo</button>
-
-  <button type="button" class="btn-secondary" id="btnCerrarNomina">Cerrar</button>
 </div>
 
 <div class="sheet-overlay" id="overlayManual"></div>
@@ -887,8 +851,6 @@ const btnCerrarAdmin = document.getElementById("btnCerrarAdmin");
 const btnAgregarTrabajador = document.getElementById("btnAgregarTrabajador");
 const statusAdmin = document.getElementById("statusAdmin");
 const cargoAgregarSelect = document.getElementById("cargoAgregar");
-const auxilioAgregarCheckbox = document.getElementById("auxilioAgregar");
-const campoValorAuxilioAgregar = document.getElementById("campoValorAuxilioAgregar");
 
 const overlayEditarTrabajador = document.getElementById("overlayEditarTrabajador");
 const sheetEditarTrabajador = document.getElementById("sheetEditarTrabajador");
@@ -896,17 +858,7 @@ const btnCerrarEditarTrabajador = document.getElementById("btnCerrarEditarTrabaj
 const btnGuardarEditarTrabajador = document.getElementById("btnGuardarEditarTrabajador");
 const statusEditarTrabajador = document.getElementById("statusEditarTrabajador");
 const editCargoSelect = document.getElementById("editCargo");
-const editAuxilioCheckbox = document.getElementById("editAuxilio");
-const campoValorAuxilioEditar = document.getElementById("campoValorAuxilioEditar");
 
-const overlayNomina = document.getElementById("overlayNomina");
-const sheetNomina = document.getElementById("sheetNomina");
-const btnNomina = document.getElementById("btnNomina");
-const btnCerrarNomina = document.getElementById("btnCerrarNomina");
-const listaNomina = document.getElementById("listaNomina");
-const linkVerSheetNomina = document.getElementById("linkVerSheetNomina");
-const listaCargosNomina = document.getElementById("listaCargosNomina");
-const btnAgregarCargoNomina = document.getElementById("btnAgregarCargoNomina");
 const overlayManual = document.getElementById("overlayManual");
 const sheetManual = document.getElementById("sheetManual");
 const btnManual = document.getElementById("btnManual");
@@ -939,7 +891,6 @@ const btnDescargarPreview = document.getElementById("btnDescargarPreview");
 const btnCompartirPreview = document.getElementById("btnCompartirPreview");
 
 let trabajadoresActuales = [];
-let cargosActuales = [];
 let pendingMark = null;
 let currentPosition = null;
 let pdfPreviewActual = null;
@@ -950,7 +901,6 @@ function abrirAdmin() {
   overlayAdmin.classList.add("open");
   sheetAdmin.classList.add("open");
   renderAdminLista();
-  cargarCargos();
 }
 function cerrarAdmin() {
   overlayAdmin.classList.remove("open");
@@ -1214,63 +1164,6 @@ function renderAdminLista() {
     </div>`).join("");
 }
 
-// ---------- Cargos (para el desplegable de cargo y el autocompletado de salario) ----------
-
-async function cargarCargos() {
-  try {
-    cargosActuales = await apiJson("/api/cargos");
-    poblarSelectCargo_(cargoAgregarSelect);
-    poblarSelectCargo_(editCargoSelect);
-    renderCargosNomina_();
-  } catch (err) {
-    // sin conexion: los selects quedan vacios, no es critico
-  }
-}
-
-function poblarSelectCargo_(select, valorPreseleccionado) {
-  const actual = valorPreseleccionado !== undefined ? valorPreseleccionado : select.value;
-  select.innerHTML = '<option value="">Selecciona un cargo</option>'
-    + cargosActuales.map((c) => `<option value="${c.nombre}">${c.nombre}</option>`).join("")
-    + '<option value="__nueva__">+ Agregar cargo nuevo...</option>';
-  select.value = actual;
-}
-
-async function manejarCambioCargo_(select, salarioInputId) {
-  if (select.value === "__nueva__") {
-    const nombre = prompt("Nombre del cargo nuevo:");
-    if (!nombre || !nombre.trim()) { select.value = ""; return; }
-    const valorPlanillaTexto = prompt(`Valor de planilla para "${nombre.trim()}" (puedes dejarlo en 0 y ajustarlo después):`);
-    const valorPlanilla = Number((valorPlanillaTexto || "0").replace(/[^\d]/g, "")) || 0;
-    let pin = "";
-    if (perfilActual.rol !== "admin") {
-      pin = prompt("PIN de seguridad:");
-      if (!pin) { select.value = ""; return; }
-    }
-    try {
-      const data = await apiJson("/api/cargos", { method: "POST", body: { nombre: nombre.trim(), valorPlanilla, pin } });
-      cargosActuales.push(data.cargo);
-      poblarSelectCargo_(cargoAgregarSelect, select === cargoAgregarSelect ? data.cargo.nombre : undefined);
-      poblarSelectCargo_(editCargoSelect, select === editCargoSelect ? data.cargo.nombre : undefined);
-      if (salarioInputId) document.getElementById(salarioInputId).value = valorPlanilla || "";
-    } catch (err) {
-      mostrarToast("Error: " + err.message, true);
-      select.value = "";
-    }
-    return;
-  }
-  const cargo = cargosActuales.find((c) => c.nombre === select.value);
-  if (cargo && salarioInputId) document.getElementById(salarioInputId).value = cargo.valorPlanilla || "";
-}
-cargoAgregarSelect.addEventListener("change", () => manejarCambioCargo_(cargoAgregarSelect, "salarioAgregar"));
-editCargoSelect.addEventListener("change", () => manejarCambioCargo_(editCargoSelect, "editSalario"));
-
-auxilioAgregarCheckbox.addEventListener("change", () => {
-  campoValorAuxilioAgregar.style.display = auxilioAgregarCheckbox.checked ? "block" : "none";
-});
-editAuxilioCheckbox.addEventListener("change", () => {
-  campoValorAuxilioEditar.style.display = editAuxilioCheckbox.checked ? "block" : "none";
-});
-
 // ---------- Editar trabajador (toda la informacion, no solo el valor) ----------
 
 function abrirEditarTrabajador(id) {
@@ -1278,13 +1171,9 @@ function abrirEditarTrabajador(id) {
   if (!t) return;
   document.getElementById("editNombreTexto").value = t.nombre;
   document.getElementById("editValorSemanal").value = t.valorSemanal || 0;
-  poblarSelectCargo_(editCargoSelect, t.cargo || "");
+  editCargoSelect.value = t.cargo || "";
   document.getElementById("editFrecuenciaPago").value = t.frecuenciaPago || "semana";
   document.getElementById("editSalario").value = t.salario || "";
-  editAuxilioCheckbox.checked = !!t.tieneAuxilioTransporte;
-  campoValorAuxilioEditar.style.display = t.tieneAuxilioTransporte ? "block" : "none";
-  document.getElementById("editValorAuxilio").value = t.valorAuxilioTransporte || "";
-  document.getElementById("editValorHoraExtra").value = t.valorHoraExtra || "";
   document.getElementById("editPctSalud").value = t.pctSalud === undefined ? 8.5 : t.pctSalud;
   document.getElementById("editPctPension").value = t.pctPension === undefined ? 12 : t.pctPension;
   document.getElementById("pinEditar").value = "";
@@ -1305,14 +1194,10 @@ overlayEditarTrabajador.addEventListener("click", cerrarEditarTrabajador);
 btnGuardarEditarTrabajador.addEventListener("click", async () => {
   const id = sheetEditarTrabajador.dataset.id;
   const valorSemanal = Number(document.getElementById("editValorSemanal").value) || 0;
-  const cargo = editCargoSelect.value === "__nueva__" ? "" : editCargoSelect.value;
   const body = {
-    valorSemanal, cargo,
+    valorSemanal, cargo: editCargoSelect.value,
     frecuenciaPago: document.getElementById("editFrecuenciaPago").value,
     salario: Number(document.getElementById("editSalario").value) || 0,
-    tieneAuxilioTransporte: editAuxilioCheckbox.checked,
-    valorAuxilioTransporte: Number(document.getElementById("editValorAuxilio").value) || 0,
-    valorHoraExtra: document.getElementById("editValorHoraExtra").value,
     pctSalud: Number(document.getElementById("editPctSalud").value) || 0,
     pctPension: Number(document.getElementById("editPctPension").value) || 0,
     pin: document.getElementById("pinEditar").value.trim(),
@@ -1387,16 +1272,12 @@ fotoMarcaInput.addEventListener("change", async () => {
 btnAgregarTrabajador.addEventListener("click", async () => {
   const nombre = document.getElementById("nuevoNombre").value.trim();
   const valorSemanal = Number(document.getElementById("valorSemanalAgregar").value) || 0;
-  const cargo = cargoAgregarSelect.value === "__nueva__" ? "" : cargoAgregarSelect.value;
   const pin = document.getElementById("pinAgregar").value.trim();
   if (!nombre) { statusAdmin.textContent = "Escribe el nombre del trabajador."; return; }
   const body = {
-    nombre, valorSemanal, cargo,
+    nombre, valorSemanal, cargo: cargoAgregarSelect.value,
     frecuenciaPago: document.getElementById("frecuenciaPagoAgregar").value,
     salario: Number(document.getElementById("salarioAgregar").value) || 0,
-    tieneAuxilioTransporte: auxilioAgregarCheckbox.checked,
-    valorAuxilioTransporte: Number(document.getElementById("valorAuxilioAgregar").value) || 0,
-    valorHoraExtra: document.getElementById("valorHoraExtraAgregar").value,
     pin,
   };
   statusAdmin.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
@@ -1408,10 +1289,6 @@ btnAgregarTrabajador.addEventListener("click", async () => {
     cargoAgregarSelect.value = "";
     document.getElementById("frecuenciaPagoAgregar").value = "semana";
     document.getElementById("salarioAgregar").value = "";
-    auxilioAgregarCheckbox.checked = false;
-    campoValorAuxilioAgregar.style.display = "none";
-    document.getElementById("valorAuxilioAgregar").value = "";
-    document.getElementById("valorHoraExtraAgregar").value = "";
     document.getElementById("pinAgregar").value = "";
     cargarTrabajadores();
   } catch (err) {
@@ -1572,103 +1449,6 @@ async function quitarTrabajador(id, nombre) {
   }
 }
 window.quitarTrabajador = quitarTrabajador;
-
-// ---------- Nomina (estimado de costo mensual por trabajador) ----------
-
-function abrirNomina() {
-  overlayNomina.classList.add("open");
-  sheetNomina.classList.add("open");
-  cargarNomina();
-  cargarCargos();
-}
-function cerrarNomina() {
-  overlayNomina.classList.remove("open");
-  sheetNomina.classList.remove("open");
-}
-btnNomina.addEventListener("click", abrirNomina);
-btnCerrarNomina.addEventListener("click", cerrarNomina);
-overlayNomina.addEventListener("click", cerrarNomina);
-
-async function cargarNomina() {
-  listaNomina.innerHTML = '<div class="status"><span class="spinner spinner-navy"></span> Cargando...</div>';
-  try {
-    const data = await apiJson(`/api/obras/${obraActual.id}/nomina`);
-    if (data.sheetUrl) {
-      linkVerSheetNomina.href = data.sheetUrl;
-      linkVerSheetNomina.style.display = "block";
-    } else {
-      linkVerSheetNomina.style.display = "none";
-    }
-    if (!data.trabajadores.length) {
-      listaNomina.innerHTML = '<div class="status">Todavía no hay trabajadores con datos de nómina.</div>';
-      return;
-    }
-    listaNomina.innerHTML = data.trabajadores.map((n) => `
-      <div class="nomina-row">
-        <div class="nombre">${n.nombre}</div>
-        ${n.cargo ? `<div class="cargo">${n.cargo}</div>` : ""}
-        <div class="linea">Salario mensual: ${formatoMoneda_(n.salarioMensual)}${n.frecuenciaPago ? ` (${n.frecuenciaPago})` : ""}</div>
-        <div class="linea">Horas extra este mes: ${n.horasExtra} h → ${formatoMoneda_(n.valorHorasExtra)}</div>
-        <div class="linea">Descuentos este mes: ${formatoMoneda_(n.descuentos)}</div>
-        ${n.tieneAuxilioTransporte ? `<div class="linea">Auxilio de transporte: ${formatoMoneda_(n.valorAuxilioTransporte)}</div>` : ""}
-        <div class="linea">Salud (${n.pctSalud}%): ${formatoMoneda_(n.salud)} · Pensión (${n.pctPension}%): ${formatoMoneda_(n.pension)}</div>
-        <div class="total">Total: ${formatoMoneda_(n.total)}</div>
-      </div>`).join("");
-  } catch (err) {
-    listaNomina.innerHTML = `<div class="status">Error: ${err.message}</div>`;
-  }
-}
-
-function renderCargosNomina_() {
-  if (!cargosActuales.length) {
-    listaCargosNomina.innerHTML = '<div class="hint">Todavía no hay cargos.</div>';
-    return;
-  }
-  listaCargosNomina.innerHTML = cargosActuales.map((c) => `
-    <div class="cargo-row">
-      <span>${c.nombre} — ${formatoMoneda_(c.valorPlanilla)}</span>
-      <button type="button" onclick="editarValorPlanillaCargo('${c.id}', '${c.nombre.replace(/'/g, "\\'")}')">Editar</button>
-    </div>`).join("");
-}
-
-async function editarValorPlanillaCargo(id, nombre) {
-  const valorTexto = prompt(`Nuevo valor de planilla para "${nombre}" (solo el número):`);
-  if (valorTexto === null) return;
-  const valorPlanilla = Number(valorTexto.replace(/[^\d]/g, "")) || 0;
-  let pin = "";
-  if (perfilActual.rol !== "admin") {
-    pin = prompt("PIN de seguridad:");
-    if (!pin) return;
-  }
-  try {
-    await apiJson(`/api/cargos/${id}`, { method: "PUT", body: { valorPlanilla, pin } });
-    mostrarToast("Valor de planilla actualizado ✓");
-    cargarCargos();
-  } catch (err) {
-    mostrarToast("Error: " + err.message, true);
-  }
-}
-window.editarValorPlanillaCargo = editarValorPlanillaCargo;
-
-btnAgregarCargoNomina.addEventListener("click", () => agregarCargoDesdeNomina_());
-async function agregarCargoDesdeNomina_() {
-  const nombre = prompt("Nombre del cargo nuevo:");
-  if (!nombre || !nombre.trim()) return;
-  const valorPlanillaTexto = prompt(`Valor de planilla para "${nombre.trim()}":`);
-  const valorPlanilla = Number((valorPlanillaTexto || "0").replace(/[^\d]/g, "")) || 0;
-  let pin = "";
-  if (perfilActual.rol !== "admin") {
-    pin = prompt("PIN de seguridad:");
-    if (!pin) return;
-  }
-  try {
-    await apiJson("/api/cargos", { method: "POST", body: { nombre: nombre.trim(), valorPlanilla, pin } });
-    mostrarToast("Cargo agregado ✓");
-    cargarCargos();
-  } catch (err) {
-    mostrarToast("Error: " + err.message, true);
-  }
-}
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
