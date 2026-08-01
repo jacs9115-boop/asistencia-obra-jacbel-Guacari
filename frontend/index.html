@@ -358,19 +358,6 @@
       <option value="mes">Mes</option>
     </select>
   </div>
-  <div class="field">
-    <label for="editSalario">Valor de la planilla (según lo elegido arriba)</label>
-    <input type="number" id="editSalario" inputmode="numeric" />
-  </div>
-  <div class="field">
-    <label for="editPctSalud">% Salud</label>
-    <input type="number" id="editPctSalud" inputmode="decimal" step="0.1" />
-  </div>
-  <div class="field">
-    <label for="editPctPension">% Pensión</label>
-    <input type="number" id="editPctPension" inputmode="decimal" step="0.1" />
-  </div>
-
   <div class="field" id="campoPinEditar">
     <label for="pinEditar">PIN de seguridad</label>
     <input type="text" id="pinEditar" inputmode="numeric" placeholder="****" />
@@ -1173,9 +1160,6 @@ function abrirEditarTrabajador(id) {
   document.getElementById("editValorSemanal").value = t.valorSemanal || 0;
   editCargoSelect.value = t.cargo || "";
   document.getElementById("editFrecuenciaPago").value = t.frecuenciaPago || "semana";
-  document.getElementById("editSalario").value = t.salario || "";
-  document.getElementById("editPctSalud").value = t.pctSalud === undefined ? 8.5 : t.pctSalud;
-  document.getElementById("editPctPension").value = t.pctPension === undefined ? 12 : t.pctPension;
   document.getElementById("pinEditar").value = "";
   statusEditarTrabajador.textContent = "";
   sheetEditarTrabajador.dataset.id = id;
@@ -1197,9 +1181,6 @@ btnGuardarEditarTrabajador.addEventListener("click", async () => {
   const body = {
     valorSemanal, cargo: editCargoSelect.value,
     frecuenciaPago: document.getElementById("editFrecuenciaPago").value,
-    salario: Number(document.getElementById("editSalario").value) || 0,
-    pctSalud: Number(document.getElementById("editPctSalud").value) || 0,
-    pctPension: Number(document.getElementById("editPctPension").value) || 0,
     pin: document.getElementById("pinEditar").value.trim(),
   };
   statusEditarTrabajador.innerHTML = '<span class="spinner spinner-navy"></span> Guardando...';
