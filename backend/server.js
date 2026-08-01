@@ -16,8 +16,6 @@ const NOMINA_SHEETS_URL = process.env.NOMINA_SHEETS_URL;
 const NOMINA_SHEETS_SECRET = process.env.NOMINA_SHEETS_SECRET;
 const NOMINA_SHEETS_VIEW_URL = process.env.NOMINA_SHEETS_VIEW_URL || "";
 
-const CARGOS_POR_DEFECTO = ["Residente", "Maestro", "Oficial", "Ayudante"];
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -240,38 +238,31 @@ async function sincronizarNomina_(obraNombre, filaNomina) {
   }
 }
 
-async function sincronizarCargo_(nombre, valorPlanilla) {
+async function sincronizarResumenSemana_(filaResumen) {
   if (!NOMINA_SHEETS_URL) return;
   try {
     await fetch(NOMINA_SHEETS_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accion: "sync_cargo", secreto: NOMINA_SHEETS_SECRET, nombre, valorPlanilla }),
+      body: JSON.stringify({ accion: "sync_resumen_semana", secreto: NOMINA_SHEETS_SECRET, ...filaResumen }),
     });
   } catch (err) {
-    console.error("No se pudo sincronizar el cargo con Google Sheets:", err.message);
+    console.error("No se pudo sincronizar el resumen semanal con Google Sheets:", err.message);
   }
 }
 
 // Junta los campos de nomina que vengan en el body (todos opcionales) en un
-// patch para Supabase. Si es un trabajador nuevo y no mandaron una tarifa de
-// hora extra propia, se sugiere la misma que ya usaria la Liquidacion.
-function construirPatchNomina_(body, { esNuevo, valorSemanal }) {
+// patch para Supabase. La tarifa de hora extra siempre es la misma que usa
+// la Liquidacion (valorSemanal/6 dividido en las horas normales del dia).
+function construirPatchNomina_(body, { valorSemanal }) {
   const patch = {};
   let hayNomina = false;
   if (body.cargo !== undefined) { patch.cargo = String(body.cargo || "").trim(); hayNomina = true; }
   if (body.frecuenciaPago !== undefined) { patch.frecuencia_pago = body.frecuenciaPago || null; hayNomina = true; }
   if (body.salario !== undefined) { patch.salario = Number(body.salario) || 0; hayNomina = true; }
-  if (body.tieneAuxilioTransporte !== undefined) { patch.tiene_auxilio_transporte = !!body.tieneAuxilioTransporte; hayNomina = true; }
-  if (body.valorAuxilioTransporte !== undefined) { patch.valor_auxilio_transporte = Number(body.valorAuxilioTransporte) || 0; hayNomina = true; }
   if (body.pctSalud !== undefined) { patch.pct_salud = Number(body.pctSalud) || 0; hayNomina = true; }
   if (body.pctPension !== undefined) { patch.pct_pension = Number(body.pctPension) || 0; hayNomina = true; }
-  if (body.valorHoraExtra !== undefined && body.valorHoraExtra !== "") {
-    patch.valor_hora_extra = Number(body.valorHoraExtra) || 0;
-    hayNomina = true;
-  } else if (esNuevo && hayNomina) {
-    patch.valor_hora_extra = valorHoraExtraSugerido(valorSemanal);
-  }
+  if (hayNomina) patch.valor_hora_extra = valorHoraExtraSugerido(valorSemanal);
   return { patch, hayNomina };
 }
 
@@ -289,13 +280,72 @@ async function recalcularYSincronizarNomina_(obraId, trabajadorRow) {
     const trabajadorParaCalculo = {
       nombre: trabajadorRow.nombre, cargo: trabajadorRow.cargo, frecuenciaPago: trabajadorRow.frecuencia_pago,
       salario: trabajadorRow.salario, valorSemanal: trabajadorRow.valor_semanal,
-      tieneAuxilioTransporte: trabajadorRow.tiene_auxilio_transporte, valorAuxilioTransporte: trabajadorRow.valor_auxilio_transporte,
       valorHoraExtra: trabajadorRow.valor_hora_extra, pctSalud: trabajadorRow.pct_salud, pctPension: trabajadorRow.pct_pension,
     };
     const nomina = calcularNominaTrabajador(trabajadorParaCalculo, registros, mesActual);
-    await sincronizarNomina_(obraRows[0]?.nombre || "", nomina);
+    await sincronizarNomina_(obraRows[0]?.nombre || "", {
+      trabajador: nomina.nombre, cargo: nomina.cargo, frecuenciaPago: nomina.frecuenciaPago,
+      salario: nomina.salario, planilla: nomina.salarioMensual, total: nomina.total,
+    });
   } catch (err) {
     console.error("No se pudo recalcular/sincronizar la nomina:", err.message);
+  }
+}
+
+// Devuelve el lunes y el domingo de la semana que contiene [fechaStr].
+function semanaDe_(fechaStr) {
+  const d = new Date(fechaStr + "T00:00:00");
+  const dow = d.getDay();
+  const diffALunes = dow === 0 ? -6 : 1 - dow;
+  const lunes = new Date(d); lunes.setDate(d.getDate() + diffALunes);
+  const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+  const fmt = (x) => { const p = (n) => String(n).padStart(2, "0"); return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`; };
+  return { desde: fmt(lunes), hasta: fmt(domingo) };
+}
+
+// Recalcula y sincroniza el resumen (corte semanal, igual que la Liquidacion)
+// de UN trabajador para la semana que contiene [fechaEvento]. Si esa semana
+// todavia tiene entradas o salidas sin pareja, se omite (se sincroniza sola
+// cuando el registro se complete).
+async function recalcularYSincronizarResumen_(obraId, trabajadorRow, fechaEvento) {
+  try {
+    const { desde, hasta } = semanaDe_(fechaEvento);
+    const registrosRaw = await sbSelect(
+      "registros",
+      `obra_id=eq.${obraId}&trabajador_id=eq.${trabajadorRow.id}&fecha=gte.${desde}&fecha=lte.${hasta}&select=tipo,fecha,hora`
+    );
+    const registros = registrosRaw.map((r) => ({
+      trabajador: trabajadorRow.nombre, tipo: r.tipo === "salida" ? "Salida" : "Entrada", fecha: r.fecha, hora: r.hora,
+    }));
+    const resultado = calcularLiquidacion({
+      trabajadores: [{ nombre: trabajadorRow.nombre, valorSemanal: trabajadorRow.valor_semanal }],
+      registros, desde, hasta, seleccion: [trabajadorRow.nombre],
+    });
+    if (!resultado.ok || !resultado.trabajadores[0]) return;
+    const t = resultado.trabajadores[0];
+    await sincronizarResumenSemana_({
+      trabajador: trabajadorRow.nombre, semana: `${desde} a ${hasta}`,
+      diasTrabajados: t.totalDiasTrabajados, valorDias: t.totalValorDias,
+      descuentos: t.totalDescuentos, horasExtra: t.totalHorasExtra,
+      valorHorasExtra: t.totalValorExtra, totalPagar: t.totalPagar,
+    });
+  } catch (err) {
+    console.error("No se pudo recalcular/sincronizar el resumen semanal:", err.message);
+  }
+}
+
+// Se llama despues de marcar/editar/eliminar un registro de asistencia:
+// mantiene la hoja "Nomina JACBEL" (fila del trabajador + resumen semanal)
+// al dia sin que nadie tenga que abrir un panel de nomina en la app.
+async function actualizarNominaYResumen_(obraId, trabajadorId, fecha) {
+  try {
+    const rows = await sbSelect("trabajadores", `id=eq.${trabajadorId}&select=*`);
+    const trabajadorRow = rows[0];
+    if (!trabajadorRow) return;
+    await recalcularYSincronizarNomina_(obraId, trabajadorRow);
+    await recalcularYSincronizarResumen_(obraId, trabajadorRow, fecha);
+  } catch (err) {
+    console.error("No se pudo actualizar nomina/resumen tras el cambio de asistencia:", err.message);
   }
 }
 
@@ -379,50 +429,6 @@ app.post("/api/obras", requireAuth, async (req, res) => {
   }
 });
 
-// ---------- Cargos (nomina) ----------
-
-app.get("/api/cargos", requireAuth, async (req, res) => {
-  try {
-    let cargos = await sbSelect("cargos", `contratista_id=eq.${req.perfil.id}&select=*&order=nombre.asc`);
-    if (!cargos.length) {
-      const filas = CARGOS_POR_DEFECTO.map((nombre) => ({ contratista_id: req.perfil.id, nombre, valor_planilla: 0 }));
-      cargos = await sbInsert("cargos", filas);
-    }
-    res.json(cargos.map((c) => ({ id: c.id, nombre: c.nombre, valorPlanilla: Number(c.valor_planilla) || 0 })));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || "Error inesperado" });
-  }
-});
-
-app.post("/api/cargos", requireAuth, requierePin, async (req, res) => {
-  try {
-    const nombre = (req.body.nombre || "").trim();
-    const valorPlanilla = Number(req.body.valorPlanilla) || 0;
-    if (!nombre) return res.status(400).json({ error: "Falta el nombre del cargo" });
-    const rows = await sbInsert("cargos", [{ contratista_id: req.perfil.id, nombre, valor_planilla: valorPlanilla }]);
-    sincronizarCargo_(nombre, valorPlanilla);
-    res.json({ ok: true, cargo: { id: rows[0].id, nombre, valorPlanilla } });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || "Error inesperado" });
-  }
-});
-
-app.put("/api/cargos/:id", requireAuth, requierePin, async (req, res) => {
-  try {
-    const valorPlanilla = Number(req.body.valorPlanilla) || 0;
-    const existentes = await sbSelect("cargos", `id=eq.${req.params.id}&contratista_id=eq.${req.perfil.id}&select=*`);
-    if (!existentes.length) return res.status(404).json({ error: "Cargo no encontrado" });
-    const rows = await sbUpdate("cargos", `id=eq.${req.params.id}`, { valor_planilla: valorPlanilla });
-    sincronizarCargo_(existentes[0].nombre, valorPlanilla);
-    res.json({ ok: true, cargo: { id: rows[0].id, nombre: rows[0].nombre, valorPlanilla } });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || "Error inesperado" });
-  }
-});
-
 // ---------- Trabajadores (por obra) ----------
 
 app.get("/api/obras/:obraId/trabajadores", requireAuth, cargarObra, async (req, res) => {
@@ -441,8 +447,6 @@ app.get("/api/obras/:obraId/trabajadores", requireAuth, cargarObra, async (req, 
         id: t.id, nombre: t.nombre, valorSemanal: Number(t.valor_semanal) || 0,
         enObra: !!e && e.tipo === "entrada", ultimaHora: e ? e.hora : null,
         cargo: t.cargo || "", frecuenciaPago: t.frecuencia_pago || "", salario: Number(t.salario) || 0,
-        tieneAuxilioTransporte: !!t.tiene_auxilio_transporte, valorAuxilioTransporte: Number(t.valor_auxilio_transporte) || 0,
-        valorHoraExtra: Number(t.valor_hora_extra) || 0,
         pctSalud: t.pct_salud === null || t.pct_salud === undefined ? 8.5 : Number(t.pct_salud),
         pctPension: t.pct_pension === null || t.pct_pension === undefined ? 12 : Number(t.pct_pension),
       };
@@ -458,7 +462,7 @@ app.post("/api/obras/:obraId/trabajadores", requireAuth, cargarObra, requierePin
     const nombre = (req.body.nombre || "").trim();
     const valorSemanal = Number(req.body.valorSemanal) || 0;
     if (!nombre) return res.status(400).json({ error: "Falta el nombre" });
-    const { patch: patchNomina, hayNomina } = construirPatchNomina_(req.body, { esNuevo: true, valorSemanal });
+    const { patch: patchNomina, hayNomina } = construirPatchNomina_(req.body, { valorSemanal });
 
     const existentes = await sbSelect("trabajadores", `obra_id=eq.${req.obraId}&nombre=eq.${encodeURIComponent(nombre)}&select=*`);
     let trabajador;
@@ -493,7 +497,7 @@ app.put("/api/obras/:obraId/trabajadores/:trabajadorId", requireAuth, cargarObra
     const valorSemanal = Number(req.body.valorSemanal) || 0;
     const antes = await sbSelect("trabajadores", `id=eq.${req.params.trabajadorId}&obra_id=eq.${req.obraId}&select=*`);
     if (!antes.length) return res.status(404).json({ error: "Trabajador no encontrado" });
-    const { patch: patchNomina, hayNomina } = construirPatchNomina_(req.body, { esNuevo: false, valorSemanal });
+    const { patch: patchNomina, hayNomina } = construirPatchNomina_(req.body, { valorSemanal });
     const rows = await sbUpdate("trabajadores", `id=eq.${req.params.trabajadorId}`, { valor_semanal: valorSemanal, ...patchNomina });
     await registrarAuditoria({
       tabla: "trabajadores", registroId: req.params.trabajadorId, accion: "editar",
@@ -522,35 +526,6 @@ app.delete("/api/obras/:obraId/trabajadores/:trabajadorId", requireAuth, cargarO
       mensaje: `Se retiró a "${antes[0].nombre}" de la obra "${obraRows[0]?.nombre || ""}"`,
     });
     res.json({ ok: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || "Error inesperado" });
-  }
-});
-
-// ---------- Nomina (estimado de costo mensual por trabajador) ----------
-
-app.get("/api/obras/:obraId/nomina", requireAuth, cargarObra, async (req, res) => {
-  try {
-    const trabajadores = await sbSelect("trabajadores", `obra_id=eq.${req.obraId}&activo=eq.true&select=*&order=nombre.asc`);
-    const mesActual = fechaColombiaTexto_(ahoraColombia_()).slice(0, 7);
-    const registrosRaw = await sbSelect(
-      "registros",
-      `obra_id=eq.${req.obraId}&fecha=gte.${mesActual}-01&select=tipo,fecha,hora,trabajadores(nombre)`
-    );
-    const registros = registrosRaw.map((r) => ({
-      trabajador: r.trabajadores?.nombre || "", tipo: r.tipo === "salida" ? "Salida" : "Entrada", fecha: r.fecha, hora: r.hora,
-    }));
-    const resultado = trabajadores.map((t) => {
-      const trabajadorParaCalculo = {
-        nombre: t.nombre, cargo: t.cargo, frecuenciaPago: t.frecuencia_pago,
-        salario: t.salario, valorSemanal: t.valor_semanal,
-        tieneAuxilioTransporte: t.tiene_auxilio_transporte, valorAuxilioTransporte: t.valor_auxilio_transporte,
-        valorHoraExtra: t.valor_hora_extra, pctSalud: t.pct_salud, pctPension: t.pct_pension,
-      };
-      return calcularNominaTrabajador(trabajadorParaCalculo, registros, mesActual);
-    });
-    res.json({ mes: mesActual, sheetUrl: NOMINA_SHEETS_VIEW_URL, trabajadores: resultado });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Error inesperado" });
@@ -593,6 +568,7 @@ app.post("/api/obras/:obraId/marcar", requireAuth, cargarObra, upload.single("fo
       fecha: fechaColombiaTexto_(ahora), hora: horaColombiaTexto_(ahora),
       lat: lat || "", lng: lng || "", fotoUrl, origen: "App",
     });
+    actualizarNominaYResumen_(req.obraId, trabajadorId, fechaColombiaTexto_(ahora));
 
     res.json({ ok: true, trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada", registro: filaRegistro[0] });
   } catch (err) {
@@ -633,6 +609,7 @@ app.post("/api/obras/:obraId/marcar-manual", requireAuth, cargarObra, requierePi
       trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada",
       fecha, hora: horaFinal, lat: "", lng: "", fotoUrl: "", origen: "Manual",
     });
+    actualizarNominaYResumen_(req.obraId, trabajadorId, fecha);
 
     res.json({ ok: true, trabajador: trabajadores[0].nombre, tipo: tipoFinal === "salida" ? "Salida" : "Entrada", fecha, hora: horaFinal });
   } catch (err) {
@@ -713,6 +690,8 @@ app.put("/api/obras/:obraId/registros/:registroId", requireAuth, cargarObra, req
       usuarioId: req.perfil.id, antes: antes[0], despues: rows[0], requirioPin: true,
     });
     sincronizarConSheets_(req.obraId, "sync_editar_registro", { registroId: req.params.registroId, fecha, hora: horaFinal });
+    actualizarNominaYResumen_(req.obraId, antes[0].trabajador_id, fecha);
+    if (antes[0].fecha !== fecha) actualizarNominaYResumen_(req.obraId, antes[0].trabajador_id, antes[0].fecha);
     res.json({ ok: true, registro: rows[0] });
   } catch (err) {
     console.error(err);
@@ -731,7 +710,45 @@ app.delete("/api/obras/:obraId/registros/:registroId", requireAuth, cargarObra, 
       usuarioId: req.perfil.id, antes: antes[0], requirioPin: true,
     });
     sincronizarConSheets_(req.obraId, "sync_eliminar_registro", { registroId: req.params.registroId });
+    actualizarNominaYResumen_(req.obraId, antes[0].trabajador_id, antes[0].fecha);
     res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Error inesperado" });
+  }
+});
+
+// Recalcula y sincroniza (una sola vez, para el historico) la fila de Nomina
+// y el resumen semanal de TODOS los trabajadores de una obra en el rango
+// [desde, hasta]. Se protege con el mismo secreto de NOMINA_SHEETS_SECRET
+// (no hay sesion de usuario disponible cuando se corre desde afuera de la app).
+app.post("/api/obras/:obraId/nomina/backfill", async (req, res) => {
+  try {
+    const { secreto, desde, hasta } = req.body;
+    if (!NOMINA_SHEETS_SECRET || secreto !== NOMINA_SHEETS_SECRET) return res.status(403).json({ error: "No autorizado" });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(desde || "") || !/^\d{4}-\d{2}-\d{2}$/.test(hasta || "")) {
+      return res.status(400).json({ error: "Falta la fecha desde/hasta" });
+    }
+    const trabajadores = await sbSelect("trabajadores", `obra_id=eq.${req.params.obraId}&select=*&order=nombre.asc`);
+
+    for (const trabajadorRow of trabajadores) {
+      await recalcularYSincronizarNomina_(req.params.obraId, trabajadorRow);
+      const fechasDeCorte = [];
+      let cursor = desde;
+      while (cursor <= hasta) {
+        fechasDeCorte.push(cursor);
+        cursor = semanaDe_(cursor).hasta;
+        const siguiente = new Date(cursor + "T00:00:00");
+        siguiente.setDate(siguiente.getDate() + 1);
+        const p = (n) => String(n).padStart(2, "0");
+        cursor = `${siguiente.getFullYear()}-${p(siguiente.getMonth() + 1)}-${p(siguiente.getDate())}`;
+      }
+      for (const fechaSemana of fechasDeCorte) {
+        await recalcularYSincronizarResumen_(req.params.obraId, trabajadorRow, fechaSemana);
+      }
+    }
+
+    res.json({ ok: true, trabajadores: trabajadores.length });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Error inesperado" });
