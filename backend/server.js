@@ -738,11 +738,11 @@ app.post("/api/obras/:obraId/nomina/backfill", async (req, res) => {
       let cursor = desde;
       while (cursor <= hasta) {
         fechasDeCorte.push(cursor);
-        cursor = semanaDe_(cursor).hasta;
-        const siguiente = new Date(cursor + "T00:00:00");
-        siguiente.setDate(siguiente.getDate() + 1);
+        const lunesActual = semanaDe_(cursor).desde;
+        const siguienteLunes = new Date(lunesActual + "T00:00:00");
+        siguienteLunes.setDate(siguienteLunes.getDate() + 7);
         const p = (n) => String(n).padStart(2, "0");
-        cursor = `${siguiente.getFullYear()}-${p(siguiente.getMonth() + 1)}-${p(siguiente.getDate())}`;
+        cursor = `${siguienteLunes.getFullYear()}-${p(siguienteLunes.getMonth() + 1)}-${p(siguienteLunes.getDate())}`;
       }
       for (const fechaSemana of fechasDeCorte) {
         await recalcularYSincronizarResumen_(req.params.obraId, trabajadorRow, fechaSemana);
