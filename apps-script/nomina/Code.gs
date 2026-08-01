@@ -15,14 +15,12 @@ var NOMINA_SHEETS_SECRET = "0Ndnf_OK96lnrwB_5aLoDm_47j6O5E93";
 // standalone (no esta atado directamente a la hoja como contenedor).
 var NOMINA_SHEET_ID = "1C7bmIZIpGZdpezmb06kMmyZmECJ1mEHYfn_DJu19wRo";
 
-var COLUMNAS_NOMINA = [
-  "Obra", "Trabajador", "Cargo", "Frecuencia de pago", "Salario",
-  "Salario mensualizado", "Auxilio transporte", "Valor auxilio",
-  "Valor hora extra", "Horas extra (mes)", "Valor horas extra",
-  "Descuentos (mes)", "Salud", "Pension", "Total mensual", "Ultima actualizacion",
-];
+var COLUMNAS_NOMINA = ["Obra", "Trabajador", "Cargo", "Forma de pago", "Salario", "Planilla", "Total mensual"];
 
-var COLUMNAS_CARGOS = ["Cargo", "Valor de planilla", "Ultima actualizacion"];
+var COLUMNAS_RESUMEN = [
+  "Trabajador", "Semana", "Dias trabajados", "Valor dias",
+  "Descuentos", "Horas extra", "Valor horas extra", "Total a pagar",
+];
 
 function doPost(e) {
   try {
@@ -31,7 +29,7 @@ function doPost(e) {
       return jsonOutput_({ ok: false, error: "No autorizado" });
     }
     if (body.accion === "sync_nomina") return syncNomina_(body);
-    if (body.accion === "sync_cargo") return syncCargo_(body);
+    if (body.accion === "sync_resumen_semana") return syncResumenSemana_(body);
     return jsonOutput_({ ok: false, error: "Accion no reconocida" });
   } catch (err) {
     return jsonOutput_({ ok: false, error: String(err) });
@@ -42,11 +40,7 @@ function syncNomina_(body) {
   var sheet = hojaNomina_();
   var fila = [
     body.obra || "", body.trabajador || "", body.cargo || "", body.frecuenciaPago || "",
-    Number(body.salario) || 0, Number(body.salarioMensual) || 0,
-    body.tieneAuxilioTransporte ? "Si" : "No", Number(body.valorAuxilioTransporte) || 0,
-    Number(body.valorHoraExtra) || 0, Number(body.horasExtra) || 0, Number(body.valorHorasExtra) || 0,
-    Number(body.descuentos) || 0, Number(body.salud) || 0, Number(body.pension) || 0,
-    Number(body.total) || 0, new Date().toISOString(),
+    Number(body.salario) || 0, Number(body.planilla) || 0, Number(body.total) || 0,
   ];
 
   var lastRow = sheet.getLastRow();
@@ -65,17 +59,21 @@ function syncNomina_(body) {
   return jsonOutput_({ ok: true });
 }
 
-function syncCargo_(body) {
-  var sheet = hojaCargos_();
-  var nombre = body.nombre || "";
-  var fila = [nombre, Number(body.valorPlanilla) || 0, new Date().toISOString()];
+function syncResumenSemana_(body) {
+  var sheet = hojaResumen_();
+  var fila = [
+    body.trabajador || "", body.semana || "",
+    Number(body.diasTrabajados) || 0, Number(body.valorDias) || 0,
+    Number(body.descuentos) || 0, Number(body.horasExtra) || 0,
+    Number(body.valorHorasExtra) || 0, Number(body.totalPagar) || 0,
+  ];
 
   var lastRow = sheet.getLastRow();
   var rowIndex = -1;
   if (lastRow >= 2) {
-    var nombres = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    for (var i = 0; i < nombres.length; i++) {
-      if (nombres[i][0] === nombre) { rowIndex = i + 2; break; }
+    var claves = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    for (var i = 0; i < claves.length; i++) {
+      if (claves[i][0] === fila[0] && claves[i][1] === fila[1]) { rowIndex = i + 2; break; }
     }
   }
   if (rowIndex === -1) {
@@ -90,8 +88,8 @@ function hojaNomina_() {
   return obtenerOCrearHoja_("Nomina", COLUMNAS_NOMINA);
 }
 
-function hojaCargos_() {
-  return obtenerOCrearHoja_("Cargos", COLUMNAS_CARGOS);
+function hojaResumen_() {
+  return obtenerOCrearHoja_("Resumen", COLUMNAS_RESUMEN);
 }
 
 function obtenerOCrearHoja_(nombre, encabezados) {
