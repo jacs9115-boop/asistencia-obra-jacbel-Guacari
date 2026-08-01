@@ -292,15 +292,16 @@ async function recalcularYSincronizarNomina_(obraId, trabajadorRow) {
   }
 }
 
-// Devuelve el lunes y el domingo de la semana que contiene [fechaStr].
+// Devuelve el lunes y el sabado de la semana que contiene [fechaStr] (la
+// semana de nomina va de lunes a sabado, igual que la Liquidacion).
 function semanaDe_(fechaStr) {
   const d = new Date(fechaStr + "T00:00:00");
   const dow = d.getDay();
   const diffALunes = dow === 0 ? -6 : 1 - dow;
   const lunes = new Date(d); lunes.setDate(d.getDate() + diffALunes);
-  const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+  const sabado = new Date(lunes); sabado.setDate(lunes.getDate() + 5);
   const fmt = (x) => { const p = (n) => String(n).padStart(2, "0"); return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`; };
-  return { desde: fmt(lunes), hasta: fmt(domingo) };
+  return { desde: fmt(lunes), hasta: fmt(sabado) };
 }
 
 // Recalcula y sincroniza el resumen (corte semanal, igual que la Liquidacion)
