@@ -8,7 +8,7 @@
 
 // Cambia este secreto por uno nuevo y ponlo tambien en NOMINA_SHEETS_SECRET
 // en el backend (.env local y variables de entorno de Render).
-var NOMINA_SHEETS_SECRET = "CAMBIA_ESTE_SECRETO";
+var NOMINA_SHEETS_SECRET = "0Ndnf_OK96lnrwB_5aLoDm_47j6O5E93";
 
 // ID de la hoja de calculo "Nomina JACBEL" (de la URL: .../spreadsheets/d/ESTE_ID/edit).
 // Se usa openById en vez de getActiveSpreadsheet porque este script es
